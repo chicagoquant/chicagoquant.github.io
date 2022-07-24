@@ -1,0 +1,31 @@
+
+
+- C++
+  - Seasoning - Sean Parent
+    - No Raw Loops
+      - slide using rotate
+      - gather using stable_partition
+    - Use ranges library
+      - find a, x
+      - sort a, less, employee_last
+      - lower_bound
+    - Range based for loops
+    - No raw synchronization primitives
+      - Raw primitives - mutex, atomic, semaphore, memory fence
+      - Task
+      - Libraries
+        - std async C++14
+        - Intel TBB
+        - Windows Thread Pool, PPL
+        - Apple - Grand Central Dispatch libdispatch
+      - packaged_task, future
+      - concurrent queue with std list
+      - buzz words
+        - dependent tasks
+        - serialized queues, groups
+        - chained tasks
+        - flow graphs
+        - joins
+    - No raw pointers
+  - Data Oriented Design - Mike Acton
+
