@@ -67,8 +67,15 @@ copy(src.begin(), src.end(), ostream_iterator<int>(cout, separator));
 #include <thread>
 
 std::jthread t1(func, std::ref(obj1), val1);
-
 t1.join();
+```
+
+## Async thread
+```cpp
+#include <future>
+auto fut = async(std::launch::async, func, args, ...);
+// func(args,...) will execute on a thread/thread-pool
+fut.wait();
 ```
 
 ## Timeit
@@ -79,6 +86,47 @@ auto tick = std::chrono::high_resolution_clock::now();
 do_work();
 auto tock = std::chrono::high_resolution_clock::now();
 auto elapsed_secs = std::chrono::duration_cast<std::chrono::duration<double>>(tock - tick)).count();
+
+// other clocks -- high_resolution_clock, system_clock
+// system_clock -> measures realtime == wallclock time
+// steady_clock -> monotonic clock
+// high_resolution_clock -> system_clock (alias for smallest tick clock)
+using std::chrono::{duration_cast, milliseconds, system_clock};
+auto t0 = system_clock::now(); // system_clock::time_point
+auto ms = duration_cast<milliseconds>(t1-t0).count();
+```
+
+## Old school time
+```cpp
+#include <time.h>
+timespec real_ts0, proc_cpu_ts0, thread_cpu_ts0;
+clock_gettime(CLOCK_REALTIME, &real_ts0);
+clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &proc_cpu_ts0);
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &thread_cpu_ts0);
+
+secs(t) = t
+nsecs(t) = t / 10**9
+double duration(timespec a, timespec b) {
+  return secs(a.tv_sec-b.tv_sec) + nsecs(a.tv_nsec-b.tv_nsec);
+}
+```
+
+## Sleep in your code
+```cpp
+#include <unistd.h>
+sleep(secs);
+usleep(microsecs);
+
+// --
+#include <chrono>
+#include <thread>
+
+this_thread::sleep_for(chrono::milliseconds(msec));
+
+using std::chrono_literals;
+this_thread::sleep_for(400ms);
+
+this_thread::sleep_until(steady_clock::now() + 500ms);
 ```
 
 ## Random data
@@ -97,7 +145,7 @@ std::uniform_int_distribution<int> U(1, 1000);
 auto x_i = U(rd);
 
 std::random_device rd; // kernel random device
-std::default_random_engine gen(rd); // msvc: mt19937
+std::default_random_engine gen(rd()); // msvc: mt19937
 std::uniform_int_distribution<int> U(1, 1000);
 auto x_i = U(gen);
 
@@ -112,8 +160,28 @@ auto X = gen();
 srand(time(0)); // seed with time
 srand(0); // seed with a deterministic value
 int X = rand();
+```
 
+## Generate N random strings of lengths upto L
+```cpp
+constexpr uint L = 2**22, N = 2**18;
+constexpr ntimes = 2**10;
 
+// generate 1 random string of length
+unique_ptr<char[]> s = new char[L];
+memset(s.get(), 'a', L*sizeof(char));
+for (uint i = 0; i < ntimes; ++i)
+{
+  s[rgen() % (L-1)] = 'a' + (rgen() % 26);
+}
+s[L-1] = 0;
+
+// fill a vector of pointers starting at random index in s
+vector<const char*> vs(N);
+for (uint i = 0; i < N; ++i)
+{
+  vs[i] = &s[rgen() % (L-1)];
+}
 ```
 
 ## Build Benchmark, GTest
@@ -146,6 +214,29 @@ cmake . -B build-msvc \
     -DGTest_ROOT=d:/devtools/google-test \
 
 cmake --build build-msvc
+```
+
+### Use google benchmark
+```cpp
+#include <benchmark/benchmark.h>
+
+void BM_some_name(benchmark::State& state) {
+  // args passed to BM are in state.range(i)
+  // state.range(0) == 100
+  ... init ..
+  for (auto _ : state) {
+    ... code to measure ...
+    benchmark::DoNotOptimize(someFuncToMeasure(...));
+  }
+}
+BENCHMARK(BM_some_name)->Arg(100); // Arg -> state.range(i)
+
+...
+
+BENCHMARK_MAIN();
+
+// c++ -g  ... -lbenchmark -pthread
+// cmake target_link_libraries(... benchmark::benchmark)
 ```
 
 ## Backup
