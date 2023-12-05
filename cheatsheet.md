@@ -96,13 +96,14 @@ auto t0 = system_clock::now(); // system_clock::time_point
 auto ms = duration_cast<milliseconds>(t1-t0).count();
 ```
 
-## Old school time
+## Old school time (nanosec granularity, high resolution)
 ```cpp
 #include <time.h>
-timespec real_ts0, proc_cpu_ts0, thread_cpu_ts0;
+timespec real_ts0, proc_cpu_ts0, thread_cpu_ts0, monotonic_ts0;
 clock_gettime(CLOCK_REALTIME, &real_ts0);
 clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &proc_cpu_ts0);
 clock_gettime(CLOCK_THREAD_CPUTIME_ID, &thread_cpu_ts0);
+clock_gettime(CLOCK_MONOTONIC_RAW, &monotonic_ts0);
 
 secs(t) = t
 nsecs(t) = t / 10**9
@@ -246,6 +247,13 @@ pushd C:\Program Files
 pushd C:\Program Files (x86)
 7z a z:\files-for-vm\vs3.7z dotnet "Microsoft SDKs" "Windows Kits" MSBuild Microsoft.NET "Microsoft Visual Studio"
 ```
+
+## Tools of trade
+- Google benchmark, catch2, nanobenchmark
+- Google test, doctest
+- Google profiler
+- LLVM Machine Code Analyzer (LLVM MCA)
+- renatoGarcia/icecream-cpp
 
 ## Visual Studio C++ Dirs
 ```text
@@ -392,3 +400,22 @@ __DOTNET_PREFERRED_BITNESS=32
 __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\dotnet\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\User\AppData\Local\Microsoft\WindowsApps;
 
 ```
+
+## Buzz words
+- New SSE 4.2 Instructions
+- Improved Lock Support
+- Additional Caching Hierarchy
+- Deeper Buffers
+- Simultaneous Multi-threading
+- Faster Virtualization
+- Better Branch Prediction
+- Improved Loop Streaming
+- Execution Unit
+- L1 Data Cache
+- Memory Order & Execution
+- L2 Cache & Interrupt Servicing
+- Paging
+- Branch Prediction
+- Out-of-order Scheduling & Retirement
+- Instruction Decode & Microcode
+- Instruction Fetch & L1 Cache
