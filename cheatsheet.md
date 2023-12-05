@@ -185,6 +185,77 @@ for (uint i = 0; i < N; ++i)
 }
 ```
 
+## Generate N random ints
+```cpp
+#include <algorithm>
+for (size_t i = 0; i < N; ++i) { v[i] = i;}
+std::random_shuffle(v.begin(), v.end());
+```
+
+## Use array of function pointers to avoid branch
+```cpp
+ulong f1(ulong x, ulong y);
+ulong f2(ulong x, ulong y);
+
+decltype(f)* fp[] = { f1, f2 };
+bool* flag = new bool[...];
+for (int i = 0; i < N; ++i) {
+  a += f[flag[i]](p1[i], p2[i]);
+}
+
+--- equivalent ---
+  a += f[flag[i]](p1[i], p2[i]);           // cons: no inlining possible
+
+  if (flag[i]) { a += f1(p1[i], p2[i]); }
+  else         { a += f2(p1[i], p2[i]); }
+```
+
+## Use lookup table
+```cpp
+#define times(i,N) for (int i = 0; i < N; ++i)
+
+unsigned char* c = ...;  // random values in [0, 255]
+unsigned char LUT[256] = { 0, 1, ..., 127, 128, 128, ..., 128 };
+times(i,N) {
+  c[i] = LUT[c[i]];
+}
+
+--- equivalent ---
+  c[i] = LUT[c[i]];
+
+  c[i] = (c[i] < 128) ? c[i] : 128;
+```
+
+## Avoid branches
+```cpp
+ulong a1 = 0, a2 = 0;
+ulong* a[2] = { &a2, &a1 };
+times(i,N) {
+  ulong s[2] = { p1[i]*p2[i], p1[i]-p2[i] };
+  a[b1[i]] += s[b1[i]];
+}
+
+--- or ---
+
+ulong a1 = 0, a2 = 0;
+times(i,N) {
+  ulong s1[2] = { 0, p1[i]-p2[i] };
+  ulong s2[2] = { p1[i]*p2[i], 0 };
+  a1 += s1[b1[i]];
+  a2 += s2[b1[i]];
+}
+
+--- equivalent to ---
+times(i,N) {
+  if (b1[i]) {
+    a1 = p1[i]-p2[i];
+  }
+  else {
+    a2 = p1[i]*p2[i];
+  }
+}
+```
+
 ## Build Benchmark, GTest
 ```shell
 # build google benchmark
@@ -238,6 +309,53 @@ BENCHMARK_MAIN();
 
 // c++ -g  ... -lbenchmark -pthread
 // cmake target_link_libraries(... benchmark::benchmark)
+
+// cl.exe /nologo /TP \
+//     -DBENCHMARK_STATIC_DEFINE \
+//     -external:I${benchmark_ROOT}/include \
+//     -external:W0 \
+//     /DWIN32 \
+//     /D_WINDOWS \
+//     /EHsc \
+//     /O2 \
+//     /Ob2 \
+//     /DNDEBUG \
+//     -std:c++20 \
+//     -MD \
+//     /showIncludes \
+//     /Foobjdir/blah.obj \
+//     /Fdobjdir/ \
+//     /FS \
+//     -c \
+//     blah.cpp
+
+// vs_link_exe --rc="...\rc.exe" \
+//     --mt="...\mt.exe" \
+//     --manifests \
+//     -- \
+//     ...\link.exe \
+//     /nologo \
+//     objdir/blah.obj \
+//     /out:blah.exe \
+//     /implib:blah.lib \
+//     /pdb:blah.pdb \
+//     /version:0.0 \
+//     /machine:x64 \
+//     /INCREMENTAL:NO \
+//     /subsystem:console \
+//     ${benchmark_ROOT}\lib\benchmark.lib \
+//     shlwapi.lib \
+//     kernel32.lib \
+//     user32.lib \
+//     gdi32.lib \
+//     winspool.lib \
+//     shell32.lib \
+//     ole32.lib \
+//     oleaut32.lib \
+//     uuid.lib \
+//     comdlg32.lib \
+//     advapi32.lib
+
 ```
 
 ## Backup
@@ -252,7 +370,7 @@ pushd C:\Program Files (x86)
 - Google benchmark, catch2, nanobenchmark
 - Google test, doctest
 - Google profiler
-- LLVM Machine Code Analyzer (LLVM MCA)
+- LLVM Machine Code Analyzer (LLVM MCA), look at timeline for assembly code execution
 - renatoGarcia/icecream-cpp
 
 ## Visual Studio C++ Dirs
@@ -419,3 +537,51 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 - Out-of-order Scheduling & Retirement
 - Instruction Decode & Microcode
 - Instruction Fetch & L1 Cache
+
+# Glossary
+- CPU
+  - Instruction Level Parallelism (ILP) - if operands are already in registers, CPU can execute several operations at once (77)
+  - Pipelining - a complex exporession is broken into stages and executed in a pipeline. Stage 2 of previous expression runs at the same time as stage 1 of next one (83)
+  - Register renaming (85)
+  - Loop unrolling
+  - Conditional Move/Add instructions to avoid conditional jump screwing up pipeline (88)
+  - Branch prediction - CPU analyzes history of every branch in the code and assumes behavior will not change (92)
+  - Speculative execution - execute code before we know for sure whether that branch will be taken or not (92)
+  - Pipeline flush - expensive, prediction was wrong, discard the result of every instruction that should not have been evaluated (92)
+  - Branch misprediction - profile with gperf
+  - Branchless computing (103)
+  - Loop Unrolling
+  - Branchless selection
+- Memory
+  - Column Access Strobe Latency / CAS Latency / CL - num of cycles for RAM to recv + process + return value for a data request (116)
+  - cache hierarchy (CPU - L1 - L2 - L3 - RAM)
+  - SRAM (cache, faster, more electricity) vs DRAM (RAM, slower, less power consumed)
+  - L1 48KB (per-core), L2 512KB (per-core), L3 16MB (per-cpu)
+  - Cache Hit (good), Cache Miss (slow)
+  - Latency - delay between time of request for data issued and time data is retrieved
+  - Bandwidth - amount of data memory bus can transmit a given time
+  - Prefetch - forward/backward access orders detected, fetch with stride (skip k items) detected
+
+# Latency numbers
+
+| Operation | Time | Size | |
+|---|---|---|---|
+| CPU instruction cycle | 0.4 ns || 2.5 GHz
+| CPU registers | ||
+| L1 cache | 0.5-1 ns | 48KB | SRAM
+| Branch misprediction| 3-5 ns ||
+| L2 cache | 4-7 ns | 512KB | SRAM
+| Mutex lock/unlock | 17-25 ns |
+| L3 Cache || 16MB |
+| RAM | 100 ns| 32GB | DRAM
+| Compress 1KB w/Zippy | 3us |
+| Send 2KB over 1Gbps nw| 20us |
+| SSD random read | 150us |
+| Read 1MB seq from RAM | 250us |
+| Roundtrip within same datacenter| 0.5ms |
+| Read 1MB seq from SSD | 1ms |
+| Disk seek | 10ms |
+| Read 1MB seq from disk | 20ms |
+
+Source: [Latency Numbers Everyone Should Know](https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf)
+
