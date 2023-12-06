@@ -78,6 +78,30 @@ auto fut = async(std::launch::async, func, args, ...);
 fut.wait();
 ```
 
+## Synchronization
+
+### Mutex lock
+```cpp
+#include <mutex>
+std::mutex mut;
+{
+  std::lock_guard<std::mutex> guard(mut);
+  ... critical section ...
+}
+```
+
+### Atomic
+```cpp
+#include <atomic>
+std::atomic<unsigned long> x(0);
+unsigned long y(100);
+
+{                                    |
+  ++x; // safe                       |  lock add DWORD PTR x[rip], 1
+  ++y; // unsafe                     |  add DWORD PTR y[rip], 1
+}
+```
+
 ## Timeit
 ```cpp
 #include <chrono>
