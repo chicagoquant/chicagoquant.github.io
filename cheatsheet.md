@@ -83,10 +83,13 @@ fut.wait();
 ### Mutex lock
 ```cpp
 #include <mutex>
-std::mutex mut;
+using namespace std;
+mutex mut;
 {
-  std::lock_guard<std::mutex> guard(mut);
-  ... critical section ...
+  lock_guard<mutex> guard(mut);     |  call pthread_mutex_lock(mut)
+                                    |    if failed call __throw_system_error(...)
+  ... critical section ...          |  ...
+                                    |  call pthread_mutex_unlock(mut)
 }
 ```
 
@@ -97,7 +100,7 @@ std::atomic<unsigned long> x(0);
 unsigned long y(100);
 
 {                                    |
-  ++x; // safe                       |  lock add DWORD PTR x[rip], 1
+  ++x; // safe                       |  lock add DWORD PTR x[rip], 1  ; locks cache line
   ++y; // unsafe                     |  add DWORD PTR y[rip], 1
 }
 ```
