@@ -85,7 +85,7 @@ fut.wait();
 #include <mutex>
 using namespace std;
 mutex mut;
-{
+{                                   |  ~ +23 nsec
   lock_guard<mutex> guard(mut);     |  call pthread_mutex_lock(mut)
                                     |    if failed call __throw_system_error(...)
   ... critical section ...          |  ...
@@ -93,16 +93,48 @@ mutex mut;
 }
 ```
 
+*Guarded* access to *shared* data is slow ... *unguarded* access to *non-shared* data is fast
+
 ### Atomic
 ```cpp
 #include <atomic>
 std::atomic<unsigned long> x(0);
 unsigned long y(100);
 
-{                                    |
-  ++x; // safe                       |  lock add DWORD PTR x[rip], 1  ; locks cache line
-  ++y; // unsafe                     |  add DWORD PTR y[rip], 1
+{                                   |  ~ +7 nsec
+  ++x; /* safe   */                 |  lock add DWORD PTR x[rip], 1  ; locks cache line
+  ++y; /* unsafe */                 |  add DWORD PTR y[rip], 1
 }
+```
+
+### Producer-Consumer
+#### SPSC queue using atomic size (lock-free)
+```cpp
+array<Item, SIZE> Q;                |  // Q[0, N) is filled
+atomic<size_t> N;                      // count of items
+/* Producer */                      |  /* Consumer */
+  produce(Q[N]);                       /* write after end of queue */
+{                                   |  {
+  ++N; /* advance end ptr */        |    while (N <= i) {}; /* wait for data */
+}                                   |  }
+                                    |  consume(Q[i]) // ok to use [0, N)
+```
+
+#### SPSC queue using locks
+```cpp
+array<Item, SIZE> Q;                |  // Q[0, N) is filled
+size_t N;                              // count of items
+mutex m;
+/* Producer */                      |  /* Consumer */
+  produce(Q[N]);                       /* write after end of queue */
+{                                   |  {
+  lock_guard l(m);                  |    size_t copy_of_N;
+  ++N;                              |    do {
+                                    |      lock_guard l(m);
+                                    |      copy_of_N = N;
+                                    |    } while (copy_of_N <= i);
+}                                   |  }
+                                    |  consume(Q[i]) // ok to use Q[0, N)
 ```
 
 ## Timeit
@@ -591,24 +623,26 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 
 # Latency numbers
 
-| Operation | Time | Size | |
-|---|---|---|---|
-| CPU instruction cycle | 0.4 ns || 2.5 GHz
-| CPU registers | ||
-| L1 cache | 0.5-1 ns | 48KB | SRAM
-| Branch misprediction| 3-5 ns ||
-| L2 cache | 4-7 ns | 512KB | SRAM
-| Mutex lock/unlock | 17-25 ns |
-| L3 Cache || 16MB |
-| RAM | 100 ns| 32GB | DRAM
-| Compress 1KB w/Zippy | 3us |
-| Send 2KB over 1Gbps nw| 20us |
-| SSD random read | 150us |
-| Read 1MB seq from RAM | 250us |
-| Roundtrip within same datacenter| 0.5ms |
-| Read 1MB seq from SSD | 1ms |
-| Disk seek | 10ms |
-| Read 1MB seq from disk | 20ms |
+| Operation | Time | Size | | Cycle |
+|---|---|---|---|---|
+| CPU instruction cycle | 0.4 ns || 2.5 GHz | 1 cycle |
+| CPU registers | ||||
+| L1 cache | 0.5-1 ns | 48KB | SRAM | 4-5 cycles |
+| Branch misprediction| 3-5 ns ||||
+| L2 cache | 4-7 ns | 512KB | SRAM| 13 cycles |
+| Mutex lock/unlock | 17-25 ns ||||
+| L3 Cache || 16MB || 42 cycles |
+| RAM | 100 ns| 32GB | DRAM| 42 cycles + 70 nsec |
+| PCIe card to RAM (DMA) |||| ? |
+| Compress 1KB w/Zippy | 3us ||||
+| Send 2KB over 1Gbps nw| 20us ||||
+| SSD random read | 150us ||||
+| Read 1MB seq from RAM | 250us ||||
+| Roundtrip within same datacenter| 0.5ms ||||
+| Read 1MB seq from SSD | 1ms ||||
+| Disk seek | 10ms ||||
+| Read 1MB seq from disk | 20ms ||||
 
 Source: [Latency Numbers Everyone Should Know](https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf)
+Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
