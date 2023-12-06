@@ -1,5 +1,7 @@
 # Competitive programming
 
+cheatsheet Content
+
 ## Header for C++ contests
 ```cpp
 #include <bits/stdc++.h>
@@ -86,7 +88,7 @@ fut.wait();
 using namespace std;
 mutex mut;
 {                                   |  ~ +23 nsec
-  lock_guard<mutex> guard(mut);     |  call pthread_mutex_lock(mut)
+  lock_guard guard(mut);            |  call pthread_mutex_lock(mut) # automatic memory barriers
                                     |    if failed call __throw_system_error(...)
   ... critical section ...          |  ...
                                     |  call pthread_mutex_unlock(mut)
@@ -135,6 +137,48 @@ mutex m;
                                     |    } while (copy_of_N <= i);
 }                                   |  }
                                     |  consume(Q[i]) // ok to use Q[0, N)
+```
+
+### Memory order
+
+| Memory Order | Description |
+|---|---|
+| Relaxed `relaxed` | least restricted, only atomic operation guarantee, nothing about visibility of other r/w |
+| Acquire-Release `acq_rel` | atomic operation become visible in correct order in all threads |
+| Acquire `acquire` | all operations done after the atomic operation should become visible after that operation, should not jump before the atomic operation in any thread |
+| Release `release` | all operations done before the atomic operation should become visible before that operation becomes visible to other threads. no guarantee about operations after that atomic operation |
+#### SPSC queue using atomic size (lock-free, with appropriate memory order)
+```cpp
+array<Item, SIZE> Q;                    |  // Q[0, N) is filled
+atomic<size_t> N;                          // count of items
+/* Producer */                          |  /* Consumer */
+  produce(Q[N]);                           /* write after end of queue */
+{                                       |  {
+  N.fetch_add(1, memory_order_release); |    while (N.load(memory_order_acquire) <= i);
+}                                       |  }
+                                        |  consume(Q[i]) // ok to use [0, N)
+```
+
+#### Release order
+```cpp
+thread_A()      |   thread_B()
+{               |   {
+a += 1;         |   a += 1;   // can not go after release barrier
+b += 1;         |   b += 1;   // can not go after barrier
+... release barrier ...
+c += 1;         |   c += 1;   // it is possible for this line to show up before release barrier
+}               |   }
+```
+
+#### Acquire order
+```cpp
+thread_A()      |   thread_B()
+{               |   {
+a = x;          |   a = x;   // it is possible for this line to show up after acquire barrier
+... acquire barrier ...
+b = y;          |   b = y;   // can not go before acquire barrier
+c = z;          |   c = z;   // can not go before barrier
+}               |   }
 ```
 
 ## Timeit
@@ -646,3 +690,4 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 Source: [Latency Numbers Everyone Should Know](https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf)
 Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
+Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16
