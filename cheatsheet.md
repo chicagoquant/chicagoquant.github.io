@@ -43,6 +43,30 @@ struct Foo {
 Foo foo { 1, 2 };
 ```
 
+## Copyable Moveable
+
+```cpp
+class Copyable                                              class NotCopyable
+{                                                           {
+public:                                                     protected:
+    Copyable() = default;                                       NotCopyable() = default;
+    ~Copyable() = default;                                      ~NotCopyable() = default;
+                                                            private:
+    Copyable(Copyable& rhs) = default;                          NotCopyable(const NotCopyable& rhs) = delete;
+    Copyable& operator=(Copyable& rhs) = default;               NotCopyable& operator=(const NotCopyable& rhs) = delete;
+};                                                          };
+
+class Moveable                                              class NotMoveable
+{                                                           {
+public:                                                     public:
+    Moveable() = default;                                       NotMoveable() = default;
+    ~Moveable() = default;                                      ~NotMoveable() = default;
+                                                            private:
+    Moveable(Moveable&& rhs) = default;                         NotMoveable(NotMoveable&& rhs) = delete;
+    Moveable& operator=(Moveable&& rhs) = default;              NotMoveable& operator=(NotMoveable&& rhs) = delete;
+};                                                          };
+```
+
 ## Copy into a vector
 ```cpp
 #include <algorithm>
@@ -100,6 +124,7 @@ mutex mut;
 See also: `std::lock`, takes care of not getting into a deadlock when locking multiple mutexes.
 
 ### Atomic
+
 ```cpp
 #include <atomic>
 std::atomic<unsigned long> x(0);
@@ -164,6 +189,70 @@ Problem: This is checking very aggressively for the lock. The thread holding the
     static const timespec one_ns = {0, 1};
     nanosleep(one_ns, nullptr);
   }
+```
+
+### Spinlock to control access to an object
+
+```cpp
+template<typename T>
+class PtrSpinlock {
+public:
+  explicit PtrSpinlock(T* p) : p_(p) {}
+  T* lock() {
+    static const timespec one_ns { 0, 1 };
+    T* tmp = nullptr;
+    for (
+      int i = 0;
+      !p_.load(memory_order_relaxed) ||   // cheaper, if p_ != nullptr then try exchange
+        !(tmp = p_.exchange(nullptr, memory_order_acquire);
+      ++i
+    ) {
+      if (i == 8) {
+        nanosleep(&ns, nullptr);
+        i = 0;
+      }
+    }
+    p_save_ = tmp;
+    return tmp;
+  }
+
+  void unlock() { p_.store(saved_p_, memory_order_release); }
+private:
+  atomic<T*> p_;
+  T* saved_p_ = nullptr;
+};
+
+PtrSpinlock<unsigned long> obj { new unsigned long(5) };
+
+void t1() {
+  unsigned long* p = obj.lock();
+  // have exclusive access to the object
+  (*p) = (*p) * 10;
+  obj.unlock();
+}
+```
+
+### Atomic counter, array next empty slot index
+
+Array next empty slot index has a data dependency, we want to ensure that the producer has filled the empty slot, and only then the index is incremented. That is guaranteed with atomic index.
+
+Counter on the other hand is not protecting any other data, so its atomic can be made memory order relaxed. Relaxed are faster on ARM CPUs, but no benefit for x86 CPUs, we any way get the stricter behavior there.
+
+```cpp
+class AtomicIndex {                                     |   class AtomicCount {
+public:                                                 |   public:
+  atomic<uint> N;                                       |     atomic<uint> N;
+  uint incr() noexcept                                  |     uint incr() noexcept
+    { return 1+N.fetch_add(1, memory_order_release); }  |       { return 1+N.fetch_add(1, memory_order_relaxed); }
+  uint get() const noexcept                             |     uint get() const noexcept
+    { return N.load(1, memory_order_acquire); }         |       { return N.load(1, memory_order_relaxed); }
+};                                                      |   };
+
+AtomicIndex idx;
+idx.incr();
+
+AtomicCount count;
+count.incr();
 ```
 
 ### Producer-Consumer
@@ -247,10 +336,9 @@ c = z;          |   c = z;   // can not go before barrier
 ```cpp
 std::atomic<size_t> count;
 
-size_t count_copy = count.load(memory_order_relaxed);
+size_t count_copy = count.load(memory_order_relaxed);  // there is no data dependency so can be relaxed
 while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_relaxed, memory_order_relaxed))
 {}
-
 ```
 
 ## Thread-safe Singleton, Double checked locking
@@ -847,5 +935,5 @@ if __name__ == '__main__':
 Source: [Latency Numbers Everyone Should Know](https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf)
 Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
-Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16, 32 GB, L1 32KB, L2 2MB, L3 6MB, PCIe 4
-Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
+- Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16, 32 GB, L1 32KB, L2 2MB, L3 6MB, PCIe 4
+- Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
