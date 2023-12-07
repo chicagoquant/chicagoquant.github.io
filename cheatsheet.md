@@ -97,6 +97,8 @@ mutex mut;
 
 *Guarded* access to *shared* data is slow ... *unguarded* access to *non-shared* data is fast
 
+See also: `std::lock`, takes care of not getting into a deadlock when locking multiple mutexes.
+
 ### Atomic
 ```cpp
 #include <atomic>
@@ -109,8 +111,64 @@ unsigned long y(100);
 }
 ```
 
+### Spinlock (not optimized, not good performance)
+```cpp
+class Spinlock {
+public:
+  // default constructible
+  // noncopyable
+  void lock() {
+    // not CAS, always exchange, exit loop when 0 -> 1
+    while (flag_.exchange(1, memory_order_acquire)) {}
+  }
+  void unlock() {
+    flag_.store(0, memory_order_release);
+  }
+private:
+  atomic<unsigned int> flag_; // 0: unlocked, 1: locked
+};
+```
+
+#### A bit better, but still not great
+```cpp
+  void lock() {
+      // do not keep updating when it is already 1, avoid locking cache line
+    while (
+      flag_.load(memory_order_relaxed) ||      // somebody else can slip in before us, its ok
+      flag_.exchange(1, memory_order_acquire)
+    )
+    {}
+  }
+```
+
+Problem: This is checking very aggressively for the lock. The thread holding the lock doesn't get scheduled to unlock. Solution: yield after trying to lock a few times
+
+#### Optimized spin-lock
+
+```cpp
+  void lock() {
+      // yield the cpu every now and then, by sleeping
+    for (int i = 0;
+      flag_.load(memory_order_relaxed) ||      // somebody else can slip in before us, its ok
+        flag_.exchange(1, memory_order_acquire);
+      ++i
+      ) {
+        if (i == 8) {       // 8 or 16 works best
+          lock_sleep();
+          i = 0;
+        }
+    }
+  }
+
+  void lock_sleep() {
+    static const timespec one_ns = {0, 1};
+    nanosleep(one_ns, nullptr);
+  }
+```
+
 ### Producer-Consumer
-#### SPSC queue using atomic size (lock-free)
+
+#### SPSC queue using atomic size (lock-free, wait-free)
 ```cpp
 array<Item, SIZE> Q;                |  // Q[0, N) is filled
 atomic<size_t> N;                      // count of items
@@ -147,7 +205,8 @@ mutex m;
 | Acquire-Release `acq_rel` | atomic operation become visible in correct order in all threads |
 | Acquire `acquire` | all operations done after the atomic operation should become visible after that operation, should not jump before the atomic operation in any thread |
 | Release `release` | all operations done before the atomic operation should become visible before that operation becomes visible to other threads. no guarantee about operations after that atomic operation |
-#### SPSC queue using atomic size (lock-free, with appropriate memory order)
+
+#### SPSC queue using atomic size (lock-free, wait-free, with appropriate memory order)
 ```cpp
 array<Item, SIZE> Q;                    |  // Q[0, N) is filled
 atomic<size_t> N;                          // count of items
@@ -179,6 +238,19 @@ a = x;          |   a = x;   // it is possible for this line to show up after ac
 b = y;          |   b = y;   // can not go before acquire barrier
 c = z;          |   c = z;   // can not go before barrier
 }               |   }
+```
+
+### Compare and swap CAS (lock-free, but not wait-free)
+
+#### Multiply operation in assembly is not atomic
+
+```cpp
+std::atomic<size_t> count;
+
+size_t count_copy = count.load(memory_order_relaxed);
+while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_relaxed, memory_order_relaxed))
+{}
+
 ```
 
 ## Timeit
@@ -622,6 +694,20 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 
 ```
 
+## Python arguments
+```python
+import argparse
+
+def main():
+  p = argparse.ArgumentParser()
+  p.add_argument('--input-file', '-i', help='Input file name')
+  p.add_argument('--output-file', '-o', help='Output file name')
+  args = p.parse_args()
+
+if __name__ == '__main__':
+  main()
+```
+
 ## Buzz words
 - New SSE 4.2 Instructions
 - Improved Lock Support
@@ -690,4 +776,5 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 Source: [Latency Numbers Everyone Should Know](https://static.googleusercontent.com/media/sre.google/en//static/pdf/rule-of-thumb-latency-numbers-letter.pdf)
 Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
-Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16
+Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16, 32 GB, L1 32KB, L2 2MB, L3 6MB, PCIe 4
+Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
