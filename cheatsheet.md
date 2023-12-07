@@ -253,6 +253,77 @@ while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_re
 
 ```
 
+## Thread-safe Singleton, Double checked locking
+
+```cpp
+class Singleton
+{
+  Singleton() = default;
+public:
+  static Singleton& GetInstance() {
+    static Singleton instance;
+    return instance;
+  }
+};
+```
+
+```cpp
+#include <mutex>
+#include <optional>
+class Singleton
+{
+public:
+  static Singleton* GetInstance();
+
+private:
+  Singleton() = default;
+  static optional<Singleton> instance;
+  static once_flag flag;
+};
+
+optional<Singleton> Singleton::instance;
+once_flag Singleton::flag {};
+
+Singleton* Singleton::GetInstance()
+{
+  call_once(flag, []() { instance.emplace(Singleton {}); });
+  return &(*instance);
+}
+```
+
+With double checked locking
+```cpp
+#include <atomic>
+#include <mutex>
+class Singleton
+{
+public:
+  static Singleton* GetInstance();
+
+private:
+  Singleton() = default;
+  static atomic<Singleton*> instance;
+  static mutex mut;
+};
+
+atomic<Singleton*> Singleton::instance;
+mutex Singleton::mut;
+
+Singleton* Singleton::GetInstance()
+{
+  Singleton* p = instance.load(memory_order_acquire);
+  if (p == nullptr) {
+    lock_guard g(mut);
+    p = instance.load(memory_order_relaxed);
+    if (p == nullptr) {
+      p = new Singleton();
+      instance.store(p, memory_order_release);
+    }
+  }
+  return p;
+}
+```
+
 ## Timeit
 ```cpp
 #include <chrono>
