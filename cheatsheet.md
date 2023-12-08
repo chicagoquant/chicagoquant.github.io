@@ -123,6 +123,21 @@ mutex mut;
 
 See also: `std::lock`, takes care of not getting into a deadlock when locking multiple mutexes.
 
+#### Read-Write lock
+
+```cpp
+#include <shared_mutex>
+shared_mutex mut;  // provides lock/unlock(), lock_shared/unlock_shared()
+{
+  unique_lock g(mut);   // writer lock
+  ... critical ...
+}
+{
+  shared_lock g(mut);   // reader lock
+  ... critical ...
+}
+```
+
 ### Atomic
 
 ```cpp
@@ -171,6 +186,10 @@ Problem: This is checking very aggressively for the lock. The thread holding the
 #### Optimized spin-lock
 
 ```cpp
+struct SpinLock {
+  SpinLock() = default; // copy constructible
+  SpinLock(const SpinLock&) = delete;
+  SpinLock& operator=(const SpinLock&) = delete;
   void lock() {
       // yield the cpu every now and then, by sleeping
     for (int i = 0;
@@ -185,10 +204,68 @@ Problem: This is checking very aggressively for the lock. The thread holding the
     }
   }
 
+  void unlock() {
+    flag_.store(0, memory_order_release);
+  }
+
+private:
   void lock_sleep() {
     static const timespec one_ns = {0, 1};
     nanosleep(one_ns, nullptr);
   }
+  atomic<uint> flag_ { 0 };
+};
+```
+
+#### Read Write Spinlock
+
+```cpp
+struct RWSpinLock {
+  RWSpinLock() = default; // copy constructible
+  RWSpinLock(const RWSpinLock&) = delete;
+  RWSpinLock& operator=(const RWSpinLock&) = delete;
+  void lock() {
+      // yield the cpu every now and then, by sleeping
+    for (int i = 0;
+      flag_.load(memory_order_relaxed) ||      // somebody else can slip in before us, its ok
+        flag_.exchange(1, memory_order_acquire);
+      ++i
+      ) {
+        if (i == 8) {       // 8 or 16 works best
+          lock_sleep();
+          i = 0;
+        }
+    }
+  }
+
+  void unlock() {
+    flag_.store(unlocked, memory_order_release);
+  }
+
+  void lock_shared() {
+    while (true) {
+      if (flag_.fetch_sub(1, memory_order_acquire) > 0) return;
+      flag_.fetch_add(1, memory_order_relaxed);
+      for (int i = 0; flag_.load(memory_order_relaxed) <= 0; ) {
+        nanosleep(i);
+      }
+    }
+  }
+
+  void unlock_shared() {
+    flag_.fetch_add(1, memory_order_release);
+  }
+
+private:
+  void lock_sleep() {
+    static const timespec one_ns = {0, 1};
+    nanosleep(one_ns, nullptr);
+  }
+  static constexpr long unlocked = 0x1L<<63;       // 0x 8000 0000 0000 0000
+  static constexpr long write_lock = 0;            // 0x 0000 0000 0000 0000
+  static constexpr long read_lock = (unlocked-1);  // 0x 7fff ffff ffff ffff
+  atomic<long> flag_ { unlocked };
+};
 ```
 
 ### Spinlock to control access to an object
@@ -451,6 +528,66 @@ Singleton* Singleton::GetInstance()
   }
   return p;
 }
+```
+
+## Data Strucutures
+### Thread safe stack
+
+#### Problematic interface
+
+Each member function is thread safe, but together they can't ensure correctness.
+
+```cpp
+struct NaiveMTStack {       |  NaiveMTStack s;
+  void push(T v);           |  ...
+  void pop();               |  if (!s.empty()) {
+  T top() const;            |    x = s.top(); // undefined behavior if empty
+  bool empty() const;       |    s.pop();
+};                          |  }
+```
+
+#### Better interface
+
+```cpp
+struct MTStack {            |  MTStack s;
+  void push(T v);           |  ...
+  optional<T> pop();        |  if (!s.empty()) {
+  optional<T> top() const;  |    s.pop();  // not undefined even if empty
+  bool empty() const;       |  }
+};                          |
+```
+
+#### Locked stack
+
+```cpp
+#include <stack>
+template<typename T, typename MutexType=mutex>      |  template<typename T>
+struct LockedMTStack {                              |  struct UnsafeStack {
+  void push(T v) {                                  |    void push(T v) {
+    lock_guard g(mut);                              |      s.push(v);
+    s.push(v);                                      |    }
+  }                                                 |
+  optional<T> pop() {                               |    optional<T> pop() {
+    lock_guard g(mut); /* writer lock */            |      if (s.empty()) { return optional<T>(nullopt); }
+    if (s.empty()) { return optional<T>(nullopt); } |      else {
+    else {                                          |        optional<T> v(move(s.top()));
+      optional<T> v(move(s.top()));                 |        s.pop();
+      s.pop();                                      |        return v;
+      return v;                                     |      }
+    }                                               |    }
+  }                                                 |
+  optional<T> top() const {                         |    optional<T> top() const {
+    lock_guard g(mut); /* reader lock */            |      if (s.empty()) { return optional<T>(nullopt); }
+    if (s.empty()) { return optional<T>(nullopt); } |      else {
+    else {                                          |        optional<T> v(s.top());
+      optional<T> v(s.top());                       |        return v;
+      return v;                                     |      }
+    }                                               |    }
+  }                                                 |
+private:                                            |  private:
+  stack<T> s;                                       |    stack<T> s;
+  mutable MutexType mut;                            |
+};                                                  |  };
 ```
 
 ## Timeit
