@@ -247,12 +247,53 @@ public:                                                 |   public:
   uint get() const noexcept                             |     uint get() const noexcept
     { return N.load(1, memory_order_acquire); }         |       { return N.load(1, memory_order_relaxed); }
 };                                                      |   };
+                                                        |
+AtomicIndex idx;                                        |   AtomicCount count;
+idx.incr();                                             |   count.incr();
+```
 
-AtomicIndex idx;
-idx.incr();
+### Thread Safe Unique Pointer
 
-AtomicCount count;
-count.incr();
+Efficient, but useful only when single producer. No checks at cleanup, cleanup should be handled in some other way.
+Can use thread safe shared-ptr if cleanup is that big a deal.
+
+```cpp
+template<typename T>
+class ThrSafeUniuePtr {
+public:
+  ThrSafeUniquePtr() = default;
+  explicit ThrSafeUniquePtr(T* p) : p_ { p } {}
+  ~ThrSafeUniquePtr() {
+    del p_.load(memory_order_relaxed);
+  }
+  // not copyable
+  ThrSafeUniquePtr(const ThrSafeUniquePtr& rhs) = delete;
+  ThrSafeUniquePtr& operator=(const ThrSafeUniquePtr& rhs) = delete;
+
+  void publish(T* p) noexcept {
+    p_.store(p, memory_order_release);
+  }
+  T* get() const noexcept {
+    return p_.load(memory_order_acquire);
+  }
+private:
+  atomic<T*> p_;
+};
+
+ThrSafeUniquePtr<MyObj> safe_ptr;
+
+void t1()                                   |   void t2()
+{                                           |   {
+    safe_ptr.publish(new MyObj());          |       MyObj* p = safe_ptr.get(); if (p != nullptr) { ... }
+}                                           |   }
+```
+
+Consumer would call `get()`, good to use if returns non-null value. Otherwise publisher not ready with data yet. Should wait for `publish()`.
+
+### Thread Safe Shared Pointer
+
+```cpp
+atomic<shared_ptr<T>>
 ```
 
 ### Producer-Consumer
