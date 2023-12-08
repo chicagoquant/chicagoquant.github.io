@@ -220,21 +220,26 @@ private:
 #### Read Write Spinlock
 
 ```cpp
+static constexpr timespec ns = { 0, 1 };
+inline void nanosleep(int& i) {
+  if (++i == 8) {
+    i = 0;
+    nanosleep(&ns, NULL);
+  }
+}
+
 struct RWSpinLock {
   RWSpinLock() = default; // copy constructible
   RWSpinLock(const RWSpinLock&) = delete;
   RWSpinLock& operator=(const RWSpinLock&) = delete;
+
   void lock() {
-      // yield the cpu every now and then, by sleeping
-    for (int i = 0;
-      flag_.load(memory_order_relaxed) ||      // somebody else can slip in before us, its ok
-        flag_.exchange(1, memory_order_acquire);
-      ++i
-      ) {
-        if (i == 8) {       // 8 or 16 works best
-          lock_sleep();
-          i = 0;
-        }
+    while (true) {
+      if (flag_.fetch_sub(unlocked, std::memory_order_acquire) == unlocked) return;
+      flag_.fetch_add(unlocked, std::memory_order_relaxed);    // Undo the lock
+      for (int i = 0; flag_.load(std::memory_order_relaxed) != idle; ) {
+        nanosleep(i);
+      }
     }
   }
 
@@ -245,7 +250,7 @@ struct RWSpinLock {
   void lock_shared() {
     while (true) {
       if (flag_.fetch_sub(1, memory_order_acquire) > 0) return;
-      flag_.fetch_add(1, memory_order_relaxed);
+      flag_.fetch_add(1, memory_order_relaxed); // undo subtract
       for (int i = 0; flag_.load(memory_order_relaxed) <= 0; ) {
         nanosleep(i);
       }
@@ -256,14 +261,16 @@ struct RWSpinLock {
     flag_.fetch_add(1, memory_order_release);
   }
 
+  bool is_unlocked() const { return flag.load(memory_order_acquire) == unlocked; }
+  bool is_locked() const { return flag.load(memory_order_acquire) != unlocked; }
+  bool is_rdlocked() const { return (flag.load(memory_order_acquire) & (unlocked-1)) != 0; }
+  bool is_wrlocked() const { return (flag.load(memory_order_acquire) == 0; }
+
 private:
-  void lock_sleep() {
-    static const timespec one_ns = {0, 1};
-    nanosleep(one_ns, nullptr);
-  }
-  static constexpr long unlocked = 0x1L<<63;       // 0x 8000 0000 0000 0000
-  static constexpr long write_lock = 0;            // 0x 0000 0000 0000 0000
-  static constexpr long read_lock = (unlocked-1);  // 0x 7fff ffff ffff ffff
+  static constexpr long unlocked = 0x1L<<60;            // 0x 1000 0000 0000 0000
+  static constexpr long write_lock = 0;                 // 0x 0000 0000 0000 0000
+  static constexpr long read_lock_mask = (unlocked-1);  // 0x 7fff ffff ffff ffff ... 1
+
   atomic<long> flag_ { unlocked };
 };
 ```
@@ -552,7 +559,7 @@ struct NaiveMTStack {       |  NaiveMTStack s;
 struct MTStack {            |  MTStack s;
   void push(T v);           |  ...
   optional<T> pop();        |  if (!s.empty()) {
-  optional<T> top() const;  |    s.pop();  // not undefined even if empty
+  optional<T> top() const;  |    x = s.pop();  // not undefined even if empty
   bool empty() const;       |  }
 };                          |
 ```
@@ -589,6 +596,12 @@ private:                                            |  private:
   mutable MutexType mut;                            |
 };                                                  |  };
 ```
+
+Performance of `LockedMTStack` vs `UnsafeStack` with 1 thread is 33ns vs 2ns.
+
+A few ideas for performance:
+- Provide interface to add / remove batches of items. That will amortize locking cost over N items
+- Use RW Lock, `top()` would use R, but `pop()` and `push()` would be W lock. Not much gain in performance in benchmarks
 
 ## Timeit
 ```cpp
@@ -1063,6 +1076,7 @@ if __name__ == '__main__':
 - Out-of-order Scheduling & Retirement
 - Instruction Decode & Microcode
 - Instruction Fetch & L1 Cache
+- Thread Sanitizer in GCC, Clang - detects data races etc
 
 # Glossary
 - CPU
