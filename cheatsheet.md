@@ -1129,3 +1129,46 @@ Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
 - Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16, 32 GB, L1 32KB, L2 2MB, L3 6MB, PCIe 4
 - Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
+
+### Create Shortcut on windows
+```bat
+C:\tools\cmder\current\vendor\git-for-windows\mingw64\bin\create-shortcut.exe
+
+create-shortcut "PATH_TO_SOURCE" "PATH_TO_DESTINATION"
+
+Usage: %s [options] <source> <destination>
+  options:
+  --work-dir  DIR_PATH
+  --arguments EXTRA_ARGS
+  --show-cmd "Normal window" "Minimised" "Maximised"
+  --icon-file ICON_FILE_PATH
+  --description "SOME COMMENT STRING"
+  --desktop-shortcut
+  --dry-run
+
+also:
+nircmd shortcut PATH_TO_SOURCE DEST_FOLDER DEST_FILENAME
+
+nircmd shortcut [filename] [folder] [shortcut title] {arguments} {icon file} {icon resource number} {ShowCmd} {Start In Folder} {Hot Key}
+Creates a shortcut to a file.
+The parameters:
+
+    [filename]: Create a shortcut to this filename.
+    [folder]: Specify the destination folder that inside it the shortcut will be created. You can specify any valid folder, including the special variables that represent system folders, like ~$folder.desktop$ (Desktop folder), ~$folder.programs$ (Start-Menu-Programs folder), and so on...
+    [shortcut title]: The text displayed in the shortcut.
+    {arguments}: Optional parameter - Additional arguments to execute the filename.
+    {icon file}: Optional parameter - Use this parameter if your want that the shortcut will be displayed with icon other than the default one.
+    {icon resource number}: Optional parameter - The resource number inside the icon file.
+    {ShowCmd}: Optional parameter - Use this parameter if you want to maximize or minimize the window of the program. Specify "max" to maximize the window or "min" to minimize it.
+    {Start In Folder}: Optional parameter - Specifies the "Start In" folder. If you don't specify this parameter, the "Start In" folder is automatically filled with the folder of the program you specify in [filename] parameter.
+    {Hot Key}: Optional parameter - Specifies an hot-key that will activate the shortcut. For example: Alt+Ctrl+A, Alt+Shift+F8, Alt+Ctrl+Shift+Y 
+
+
+Examples:
+shortcut "f:\winnt\system32\calc.exe" "~$folder.desktop$" "Windows Calculator"
+shortcut "f:\winnt\system32\calc.exe" "~$folder.programs$\Calculators" "Windows Calculator"
+shortcut "f:\Program Files\KaZaA\Kazaa.exe" "c:\temp\MyShortcuts" "Kazaa"
+shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "f:\winnt\system32\shell32.dll" 45
+shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "" "" "max"
+See: https://www.nirsoft.net/utils/nircmd2.html
+```
