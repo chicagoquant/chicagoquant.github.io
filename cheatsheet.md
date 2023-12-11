@@ -1172,3 +1172,100 @@ shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "f:\
 shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "" "" "max"
 See: https://www.nirsoft.net/utils/nircmd2.html
 ```
+
+# Python
+
+## Web requests
+
+```python
+import requests
+
+page = requests.get(URL)
+page.text       # can have encoding problems
+page.content    # raw bytes, no encoding issues
+
+from bs4 import BeautifulSoup as BS
+soup = BS(page.content, 'html.parser')
+
+title_tag = soup.title
+title_tag.contents[0].contents
+for child in title_tag.children:  # direct children
+  child
+
+title_tag.string
+
+soup.body.b
+soup.a          # first tag by that name
+soup.find_all('a')
+head_tag = soup.head
+head_tag.contents[0]                # direct children
+head_tag.descendants                # all children recursively
+
+head_tag.parent
+head_tag.parents                    # recursive up
+
+head_tag.next_sibling
+head_tag.previous_sibling
+
+head_tag.next_element
+head_tag.previous_element
+head_tag.next_elements
+head_tag.previous_elements
+
+soup.find_all('a') = soup.a = soup('a')
+soup.body.find_all(string='python') = soup.body(string='python')
+```
+
+```text
+<div id="SomeId">
+  ...
+  <div class="SomeClass SomeOtherClass">
+    <h2 class="SubClass">...</h2>
+    <p class="SubClass">...</p>
+  </div>
+</div>
+```
+
+### Find
+```python
+soup.find_all('b')
+soup.find_all(re.compile("^b"))     # import re, matches body, b, ...
+soup.find_all(['a', 'b'])
+soup.find_all(True)
+soup.find_all(predicate)            # predicate(tag) -> bool
+soup.find_all(name, attrs, recursive, string, limit, ...)
+                                    # name ~ tagname, predicate, ...
+                                    # attrs ~ id, class_, dict(attr, val) ...
+```
+
+### Find by id
+```python
+results = soup.find(id='SomeId')
+results.prettify()
+```
+
+### Find by div
+```python
+items = soup.find_all('div', class_='SomeClass')
+for item in items:
+  child_item = item.find('h2', class_='SubClass')
+  child_item = item.find('p', class_='SubClass')
+  str(child_item)
+  child_item.text
+  child_item.text.strip()
+```
+
+### find by content text
+```python
+all_h2 = results.find_all('h2')
+all_h2 = results.find_all('h2', string='...')
+all_h2 = results.find_all('h2', string=lambda t: '...' in t.lower())
+for h2_item in all_h2:
+  item = h2.parent.parent.parent
+  child_item = item.find('h3', class_='SomeClass')
+  child_item.text.strip()
+  child_item['attrib']
+  child_item['href']
+```
+
+See also: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
