@@ -151,6 +151,24 @@ unsigned long y(100);
 }
 ```
 
+#### Atomic for 2 numbers, pack them in 64-bit atomic word
+
+```cpp
+struct Pair {
+  int32_t a;
+  int32_t b;
+
+  // return true if equal, otherwise store update stored values from atomic n
+  bool equal(atomic<Pair>& n) {
+    if (a == b) return true;
+    *this = n.load(memory_order_relaxed);
+    return false;
+  }
+};
+
+atomic<Pair> nums;
+```
+
 ### Spinlock (not optimized, not good performance)
 ```cpp
 class Spinlock {
@@ -343,7 +361,7 @@ Can use thread safe shared-ptr if cleanup is that big a deal.
 
 ```cpp
 template<typename T>
-class ThrSafeUniuePtr {
+class ThrSafeUniquePtr {
 public:
   ThrSafeUniquePtr() = default;
   explicit ThrSafeUniquePtr(T* p) : p_ { p } {}
@@ -420,7 +438,12 @@ mutex m;
 | Acquire `acquire` | all operations done after the atomic operation should become visible after that operation, should not jump before the atomic operation in any thread |
 | Release `release` | all operations done before the atomic operation should become visible before that operation becomes visible to other threads. no guarantee about operations after that atomic operation |
 
+- Note: On X86 processors, all stores are accompanied by a release barrier. So relaxed is not any cheaper on X86.
+- Note: Compilers don't optimize by reordering instructions around atomic
+- Note: Still may specify memory order explicitly for documenting intent, or for portability to ARM
+
 #### SPSC queue using atomic size (lock-free, wait-free, with appropriate memory order)
+
 ```cpp
 array<Item, SIZE> Q;                    |  // Q[0, N) is filled
 atomic<size_t> N;                          // count of items
@@ -570,7 +593,7 @@ struct MTStack {            |  MTStack s;
 #include <stack>
 template<typename T, typename MutexType=mutex>      |  template<typename T>
 struct LockedMTStack {                              |  struct UnsafeStack {
-  void push(T v) {                                  |    void push(T v) {
+  void push(const T& v) {                           |    void push(const T& v) {
     lock_guard g(mut);                              |      s.push(v);
     s.push(v);                                      |    }
   }                                                 |
@@ -602,6 +625,115 @@ Performance of `LockedMTStack` vs `UnsafeStack` with 1 thread is 33ns vs 2ns.
 A few ideas for performance:
 - Provide interface to add / remove batches of items. That will amortize locking cost over N items
 - Use RW Lock, `top()` would use R, but `pop()` and `push()` would be W lock. Not much gain in performance in benchmarks
+
+### Thread Safe Queue
+
+#### Option 1 -- spinlock
+```cpp
+template<typename T>
+struct MTQueue {
+  void push(const T& v) {
+    lock_guard g(l);                // faster than mutex
+    q.push(v);
+  }
+
+  optional<T> pop() {
+    lock_guard g(l);
+    if (q.empty()) {
+      return optional<T>(nullopt);
+    }
+    else {
+      optional<T> res(move(q.front()));
+      q.pop();
+      return res;
+    }
+  }
+private:
+  queue<T> q;
+  mutable spinlock l;
+};
+```
+
+#### Option 2 -- lock-free, wait-free queue SPSC (1 producer, 1 consumer)
+
+- Producer, Consumer for a queue don't interact unless when the queue is empty. Don't need synchronization, except for `size`, which we can make atomic
+- Even alternating `push()`, `pop()` will run out of a linear array when we reach the end. Solution: circular buffer
+- Upper bound on the size of the queue
+- 1 P, 1 C -- for  transfer data, with very low, predictable latency
+
+```cpp
+template<typename T>
+struct SPSCLockFreeWaitFreeQueue {
+  explicit SPSCLockFreeWaitFreeQueue(size_t cap) : capacity(cap), buffer(new T[cap]) {}
+  ~SPSCLockFreeWaitFreeQueue() { delete[] buffer; }
+
+  bool push(const T& v);
+  optional<T> pop();
+private:
+  const size_t capacity;
+  T* const buffer;
+  size_t front = 0;
+  size_t back = 0;
+  atomic<size_t> size;
+};
+
+bool push(const T& v) {
+  if (size.load(memory_order_relaxed) >= capacity) {
+    return false;
+  }
+  new (&(buffer[back % capacity])) T(v);  // placement new
+  ++back;
+  size.fetch_add(1, memory_order_release);
+  return true;
+}
+
+optional<T> pop() {
+  if (size.load(memory_order_acquire) == 0) {
+    return optional<T>(nullopt);
+  }
+  else {
+    optional<T> res( move(buffer[front%capacity]) );
+    buffer[front%capacity].~T();
+    ++front;
+    size.fetch_sub(1, memory_order_relaxed);
+    return res;
+  }
+}
+```
+
+## Coroutines in C++20
+
+### Bare c++
+```cpp
+// g++ -std=c++20 -fcoroutines
+#include <coroutine>
+
+// can call the return type anything else, instead of generator<T>
+generator<int> a_coroutine_func()
+{
+  ...
+  for (int i = 0; i < 100; ++i)
+  {
+  co_yield i;
+  }
+  // or
+  // co_await;
+  ...
+  co_return;
+}
+
+int main()
+{
+   auto handle = a_coroutine_func().h_;     // creates activation frame
+   auto& promise = handle.promise();        // not std::promise, a different type, generator::promise_type
+   ...
+   promise.value_;          // use what yield returned
+   handle();                // resume the coroutine, like next() in python
+   ...
+   handle.destroy();
+}
+
+```
 
 ## Timeit
 ```cpp
@@ -1131,7 +1263,7 @@ Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 - Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
 
 ### Create Shortcut on windows
-```bat
+```text
 C:\tools\cmder\current\vendor\git-for-windows\mingw64\bin\create-shortcut.exe
 
 create-shortcut "PATH_TO_SOURCE" "PATH_TO_DESTINATION"
@@ -1147,22 +1279,26 @@ Usage: %s [options] <source> <destination>
   --dry-run
 
 also:
+
 nircmd shortcut PATH_TO_SOURCE DEST_FOLDER DEST_FILENAME
 
-nircmd shortcut [filename] [folder] [shortcut title] {arguments} {icon file} {icon resource number} {ShowCmd} {Start In Folder} {Hot Key}
+nircmd shortcut [filename] [folder] [shortcut title] \
+  {arguments} {icon file} {icon resource number} \
+  {ShowCmd} {Start In Folder} {Hot Key}
+
 Creates a shortcut to a file.
+
 The parameters:
 
-    [filename]: Create a shortcut to this filename.
-    [folder]: Specify the destination folder that inside it the shortcut will be created. You can specify any valid folder, including the special variables that represent system folders, like ~$folder.desktop$ (Desktop folder), ~$folder.programs$ (Start-Menu-Programs folder), and so on...
-    [shortcut title]: The text displayed in the shortcut.
-    {arguments}: Optional parameter - Additional arguments to execute the filename.
-    {icon file}: Optional parameter - Use this parameter if your want that the shortcut will be displayed with icon other than the default one.
-    {icon resource number}: Optional parameter - The resource number inside the icon file.
-    {ShowCmd}: Optional parameter - Use this parameter if you want to maximize or minimize the window of the program. Specify "max" to maximize the window or "min" to minimize it.
-    {Start In Folder}: Optional parameter - Specifies the "Start In" folder. If you don't specify this parameter, the "Start In" folder is automatically filled with the folder of the program you specify in [filename] parameter.
-    {Hot Key}: Optional parameter - Specifies an hot-key that will activate the shortcut. For example: Alt+Ctrl+A, Alt+Shift+F8, Alt+Ctrl+Shift+Y 
-
+  [filename]: Create a shortcut to this filename.
+  [folder]: Specify the destination folder that inside it the shortcut will be created. You can specify any valid folder, including the special variables that represent system folders, like ~$folder.desktop$ (Desktop folder), ~$folder.programs$ (Start-Menu-Programs folder), and so on...
+  [shortcut title]: The text displayed in the shortcut.
+  {arguments}: Optional parameter - Additional arguments to execute the filename.
+  {icon file}: Optional parameter - Use this parameter if your want that the shortcut will be displayed with icon other than the default one.
+  {icon resource number}: Optional parameter - The resource number inside the icon file.
+  {ShowCmd}: Optional parameter - Use this parameter if you want to maximize or minimize the window of the program. Specify "max" to maximize the window or "min" to minimize it.
+  {Start In Folder}: Optional parameter - Specifies the "Start In" folder. If you don't specify this parameter, the "Start In" folder is automatically filled with the folder of the program you specify in [filename] parameter.
+  {Hot Key}: Optional parameter - Specifies an hot-key that will activate the shortcut. For example: Alt+Ctrl+A, Alt+Shift+F8, Alt+Ctrl+Shift+Y
 
 Examples:
 shortcut "f:\winnt\system32\calc.exe" "~$folder.desktop$" "Windows Calculator"
