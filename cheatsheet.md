@@ -78,6 +78,18 @@ vector<int> dst;
 copy(src.begin(), src.end(), back_inserter(dst));
 ```
 
+### Copying
+
+```cpp
+class C {
+  vector<int> vi;
+  C(vector<int> v) : vi(move(v)) { /* do not use v here, it is moved. use vi */ }
+};
+
+/* lvalue */                       | /* rvalue */                       | /* l/r-value */
+C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vector<int> v) : vi(move(v)) {}
+```
+
 ## Print a vector
 ```cpp
 #include <algorithm>
