@@ -1,6 +1,79 @@
 # Competitive programming
 
-cheatsheet Content
+- [Competitive programming](#competitive-programming)
+  - [Header for C++ contests](#header-for-c-contests)
+  - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
+  - [Uniform initialization](#uniform-initialization)
+  - [Copyable Moveable](#copyable-moveable)
+  - [Copy into a vector](#copy-into-a-vector)
+    - [Copying](#copying)
+  - [Templates](#templates)
+    - [Variadic Template Function](#variadic-template-function)
+    - [Variadic Template Class](#variadic-template-class)
+  - [Print a vector](#print-a-vector)
+  - [Thread](#thread)
+  - [Async thread](#async-thread)
+  - [Synchronization](#synchronization)
+    - [Mutex lock](#mutex-lock)
+      - [Read-Write lock](#read-write-lock)
+    - [Atomic](#atomic)
+      - [Atomic for 2 numbers, pack them in 64-bit atomic word](#atomic-for-2-numbers-pack-them-in-64-bit-atomic-word)
+    - [Spinlock (not optimized, not good performance)](#spinlock-not-optimized-not-good-performance)
+      - [A bit better, but still not great](#a-bit-better-but-still-not-great)
+      - [Optimized spin-lock](#optimized-spin-lock)
+      - [Read Write Spinlock](#read-write-spinlock)
+    - [Spinlock to control access to an object](#spinlock-to-control-access-to-an-object)
+    - [Atomic counter, array next empty slot index](#atomic-counter-array-next-empty-slot-index)
+    - [Thread Safe Unique Pointer](#thread-safe-unique-pointer)
+    - [Thread Safe Shared Pointer](#thread-safe-shared-pointer)
+    - [Producer-Consumer](#producer-consumer)
+      - [SPSC queue using atomic size (lock-free, wait-free)](#spsc-queue-using-atomic-size-lock-free-wait-free)
+      - [SPSC queue using locks](#spsc-queue-using-locks)
+    - [Memory order](#memory-order)
+      - [SPSC queue using atomic size (lock-free, wait-free, with appropriate memory order)](#spsc-queue-using-atomic-size-lock-free-wait-free-with-appropriate-memory-order)
+      - [Release order](#release-order)
+      - [Acquire order](#acquire-order)
+    - [Compare and swap CAS (lock-free, but not wait-free)](#compare-and-swap-cas-lock-free-but-not-wait-free)
+      - [Multiply operation in assembly is not atomic](#multiply-operation-in-assembly-is-not-atomic)
+  - [Thread-safe Singleton, Double checked locking](#thread-safe-singleton-double-checked-locking)
+  - [Data Strucutures](#data-strucutures)
+    - [Thread safe stack](#thread-safe-stack)
+      - [Problematic interface](#problematic-interface)
+      - [Better interface](#better-interface)
+      - [Locked stack](#locked-stack)
+    - [Thread Safe Queue](#thread-safe-queue)
+      - [Option 1 -- spinlock](#option-1----spinlock)
+      - [Option 2 -- lock-free, wait-free queue SPSC (1 producer, 1 consumer)](#option-2----lock-free-wait-free-queue-spsc-1-producer-1-consumer)
+  - [Coroutines in C++20](#coroutines-in-c20)
+    - [Bare c++](#bare-c)
+  - [CPP Features](#cpp-features)
+    - [Structured binding](#structured-binding)
+  - [Timeit](#timeit)
+  - [Old school time (nanosec granularity, high resolution)](#old-school-time-nanosec-granularity-high-resolution)
+  - [Sleep in your code](#sleep-in-your-code)
+  - [Random data](#random-data)
+  - [Generate N random strings of lengths upto L](#generate-n-random-strings-of-lengths-upto-l)
+  - [Generate N random ints](#generate-n-random-ints)
+  - [Use array of function pointers to avoid branch](#use-array-of-function-pointers-to-avoid-branch)
+  - [Use lookup table](#use-lookup-table)
+  - [Avoid branches](#avoid-branches)
+  - [Build Benchmark, GTest](#build-benchmark-gtest)
+    - [Use google benchmark](#use-google-benchmark)
+  - [Backup](#backup)
+  - [Tools of trade](#tools-of-trade)
+  - [Visual Studio C++ Dirs](#visual-studio-c-dirs)
+  - [Python arguments](#python-arguments)
+  - [Buzz words](#buzz-words)
+  - [Glossary](#glossary)
+  - [Latency numbers](#latency-numbers)
+    - [Create Shortcut on windows](#create-shortcut-on-windows)
+  - [Python](#python)
+    - [Web requests](#web-requests)
+    - [Find](#find)
+    - [Find by id](#find-by-id)
+    - [Find by div](#find-by-div)
+    - [find by content text](#find-by-content-text)
+
 
 ## Header for C++ contests
 ```cpp
@@ -88,6 +161,36 @@ class C {
 
 /* lvalue */                       | /* rvalue */                       | /* l/r-value */
 C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vector<int> v) : vi(move(v)) {}
+```
+
+## Templates
+
+- ellipsis opertor
+  - `... T` -- a **parameter pack** of 0+ arguments, example: `template<typename ...T>`, `func( ...v)` is a parameter pack
+  - `pattern_with_v ...` -- an **expansion** of parameter pack into separate arguments, whole expression to the left of ellipsis is repeated for all the unpacked arguments, separated with a comma or a space
+  - `p1 BINARY_OP ... BINARY_OP p2` -- a **fold** expression of parameter pack. example: `u + ... + v`, or `v + ...`, or `... + v`
+- `sizeof...(T)` -- number of arguments in the pack
+
+See also: cpp insights
+
+### Variadic Template Function
+
+```cpp
+template<typename ...T> auto sum(const T& ... x) { // zero or more arguments
+  return (x + ...);   // fold expression
+}
+// alternative, recursion
+template<typename T1> auto sum(const T1& x1) { return x1; }                     // overload 1
+template<typename T1, typename ...T> auto sum(const T1& x1, const T& ... x) {   // overload 2
+  return x1 + sum(x ...);
+}
+```
+
+### Variadic Template Class
+
+```cpp
+
+template<typename ...T> class Tuple
 ```
 
 ## Print a vector
@@ -747,6 +850,129 @@ int main()
 
 ```
 
+## CPP Features
+
+### Structured binding
+
+```cpp
+auto [x, y] = get_point(n);
+
+tuple<int, int> t(100, 200);
+const auto& [x, y] = t;
+
+int a[] = { 1, 3 };
+auto& [x, y] = a;
+
+struct S { int a; int b };
+S s { 1, 10 };
+auto [ x, y ] = s;    // accessible data members, in order declared in struct/class
+
+int a = 1, b = 10;
+const auto& [x, y] = tie(a, b);  // tie creates a tuple of lvalue references
+
+int p, q;
+tie(p, q) = tuple<int, int>(100, 200);
+
+map<int, int> m { {1, 100}, {2, 200}, };
+for (auto [x, y] : m)           | for (auto v : m)
+{                               | {
+  ...                           |   v.first; v.second;
+}                               | }
+```
+
+Compatible type T, if the following metafunctions are available:
+- `std::tuple_size<T>::value` number of T's elements
+- `std::tuple_element<I>::type` type of I-th element
+- `return_type std::get<I>(T)` retrieves I-th element
+
+Already defined for `std::tuple, pair, array`
+
+For a custom class, example:
+
+```cpp
+#include <utility>
+#include <type_traits>
+class A {
+  ...
+  // option 1 for get(), as a member
+  template<size_t I> tuple_element_t<I, A>& get() &
+  {
+    if constexpr (I == 0) return int_val;
+    if constexpr (I == 1) return char_val;
+    ...
+  }
+  ... also need const, rvalue ref ...
+  template<size_t I> tuple_element_t<I, A> const& get() const { ... }
+  template<size_t I> tuple_element_t<I, A>& get() && { ... return std::move(int_val); ... }
+  template<size_t I> tuple_element_t<I, A> const& get() const&& { ... return std::move(int_val); ... }
+  // option 2 for get(), use helper
+  template<size_t I, typename T> auto&& get_helper(T&& t)
+  {
+    static_assert(I < 5, "Index out of bounds for A");
+    if constexpr (I == 0) return std::forward<T>(t).int_val;
+    if constexpr (I == 1) return std::forward<T>(t).char_val;
+    if constexpr (I == 2) return std::forward<T>(t).float_val;
+    ...
+  }
+  template<size_t I> auto&& get() & { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() && { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() const& { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() const&& { return get_helper<I>(*this); }
+  // see alternative get() below, as non-member
+};
+
+namespace std {
+  template<> struct tuple_size<A> { static constexpr size_t value = 5; };
+    // alternative
+  template<> struct tuple_size<A> : integral_constant<size_t, 5> {};
+
+  template<> struct tuple_element<0, A> { using type = int; };
+  template<> struct tuple_element<1, A> { using type = char; };
+  template<> struct tuple_element<2, A> { using type = float; };
+  template<> struct tuple_element<3, A> { using type = string; };
+  template<> struct tuple_element<4, A> { using type = int; };
+    // alternative
+  template<size_t I> struct tuple_element<I, A>
+    : conditional<I == 0, int,
+        conditonal<I == 1, char,
+          conditional<I == 2, float,
+            conditional<I == 3, string, int>
+          >
+        >
+      >
+  {
+    static_assert(I < 5, "Index out of bounds for A">);
+  };
+    // alternative
+  template<size_t I> struct tuple_element<I, A>
+    : tuple_element<I, tuple<int, char, float, string, int>>
+  {};
+
+  // alternative get, possible to do this way for an existing class that can't modify
+  template<size_t I> tuple_element_t<I, A>& get(A& a)
+  {
+    if constexpr (I == 0) return a.int_val;
+    if constexpr (I == 1) return a.char_val;
+    ...
+  }
+
+  // alternative get, using helper
+  template<size_t I, typename T> auto&& A_get_helper(T&& t)
+  {
+    static_assert(I < 5, "Index out of bounds for A");
+    if constexpr (I == 0) return std::forward<T>(t).int_val;
+    if constexpr (I == 1) return std::forward<T>(t).char_val;
+    if constexpr (I == 2) return std::forward<T>(t).float_val;
+  }
+  template<size_t I> auto&& get(A& t) { return A_get_helper<I>(t); }
+  template<size_t I> auto&& get(const A& t) { return A_get_helper<I>(t); }
+  template<size_t I> auto&& get(A&& t) { return A_get_helper<I>(move(t)); }
+  template<size_t I> auto&& get(A const&& t) { return A_get_helper<I>(move(t)); }
+}
+```
+
+See: [C++ on Sea 2020 - S/B uncovered](https://youtu.be/uZCvz-E1heA?t=1592)
+
 ## Timeit
 ```cpp
 #include <chrono>
@@ -1041,6 +1267,7 @@ pushd C:\Program Files (x86)
 - Google profiler
 - LLVM Machine Code Analyzer (LLVM MCA), look at timeline for assembly code execution
 - renatoGarcia/icecream-cpp
+- TCMalloc thread caching malloc
 
 ## Visual Studio C++ Dirs
 ```text
@@ -1221,8 +1448,11 @@ if __name__ == '__main__':
 - Instruction Decode & Microcode
 - Instruction Fetch & L1 Cache
 - Thread Sanitizer in GCC, Clang - detects data races etc
+- NUMA - Non Uniform Memory Architecture - a memory bank is closer to one CPU, memory is not symmetric
+- SIMD instructions -- SSE, AVX
+- RCU Read-Copy-Update synchronization mechanism
 
-# Glossary
+## Glossary
 - CPU
   - Instruction Level Parallelism (ILP) - if operands are already in registers, CPU can execute several operations at once (77)
   - Pipelining - a complex exporession is broken into stages and executed in a pipeline. Stage 2 of previous expression runs at the same time as stage 1 of next one (83)
@@ -1246,7 +1476,26 @@ if __name__ == '__main__':
   - Bandwidth - amount of data memory bus can transmit a given time
   - Prefetch - forward/backward access orders detected, fetch with stride (skip k items) detected
 
-# Latency numbers
+- Compiler Optimizations
+  - RVO return value optimization, NRVO named-RVO
+  - Copy elision, Move elision
+  - Loop unrolling
+  - Strength reduction - taking expensive operations and transforming them to less expensive
+  - Inlining
+  - Constant folding - replace expressions that can be calculated at compile time with constant
+  - Constant propagation - value is constant for all possible executions
+  - Dead code removal
+  - Instruction selection - set of choices of assembly instructions to choose
+    - `countSetBits(n)` -> `POPCNT`
+    - https://uops.info/table.html
+  - Loop invariant code movement
+  - Peephole optimization - look for local optimizations between short sequences of instructions
+  - Tail call removal - replace recursive function calls with a loop
+  - LTO link time optimization, LTCG link time code generation, `g++ -flto a.cpp b.cpp -o main`
+  - Devirtualization, at LTO time, speculative devirtualization
+
+
+## Latency numbers
 
 | Operation | Time | Size | | Cycle |
 |---|---|---|---|---|
@@ -1321,9 +1570,9 @@ shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "" "
 See: https://www.nirsoft.net/utils/nircmd2.html
 ```
 
-# Python
+## Python
 
-## Web requests
+### Web requests
 
 ```python
 import requests
