@@ -73,6 +73,7 @@
     - [Find by id](#find-by-id)
     - [Find by div](#find-by-div)
     - [find by content text](#find-by-content-text)
+    - [Windows Commands using WSH](#windows-commands-using-wsh)
 
 
 ## Header for C++ contests
@@ -1671,3 +1672,18 @@ for h2_item in all_h2:
 ```
 
 See also: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
+
+### Windows Commands using WSH
+
+```python
+import win32com.client as wc
+shell = wc.Dispatch("WScript.Shell")
+# AppActivate CreateShortcut CurrentDirectory Environment Exec ExpandEnvironmentStrings LogEvent Popup RegDelete RegRead RegWrite Run SendKeys SpecialFolders
+shortcut = shell.CreateShortCut(path)
+# Arguments Description FullName Hotkey IconLocation Load RelativePath Save TargetPath WindowStyle WorkingDirectory
+shortcut.TargetPath
+print(shortcut.TargetPath)
+
+shortcut.TargetPath = path_to_the_target_file
+shortcut.Save()
+```
