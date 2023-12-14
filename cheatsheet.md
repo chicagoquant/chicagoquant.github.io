@@ -62,12 +62,12 @@
   - [Backup](#backup)
   - [Tools of trade](#tools-of-trade)
   - [Visual Studio C++ Dirs](#visual-studio-c-dirs)
-  - [Python arguments](#python-arguments)
   - [Buzz words](#buzz-words)
   - [Glossary](#glossary)
   - [Latency numbers](#latency-numbers)
     - [Create Shortcut on windows](#create-shortcut-on-windows)
   - [Python](#python)
+    - [Python arguments](#python-arguments)
     - [Web requests](#web-requests)
     - [Find](#find)
     - [Find by id](#find-by-id)
@@ -1415,20 +1415,6 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
 
 ```
 
-## Python arguments
-```python
-import argparse
-
-def main():
-  p = argparse.ArgumentParser()
-  p.add_argument('--input-file', '-i', help='Input file name')
-  p.add_argument('--output-file', '-o', help='Output file name')
-  args = p.parse_args()
-
-if __name__ == '__main__':
-  main()
-```
-
 ## Buzz words
 - New SSE 4.2 Instructions
 - Improved Lock Support
@@ -1571,6 +1557,25 @@ See: https://www.nirsoft.net/utils/nircmd2.html
 ```
 
 ## Python
+
+### Python arguments
+```python
+import argparse
+
+def main(args):
+  if args.enable:
+    print("enabled")
+
+if __name__ == '__main__':
+  p = argparse.ArgumentParser()
+  p.add_argument('--input-file', '-i', help='Input file name')
+  p.add_argument('--output-file', '-o', help='Output file name')
+  p.add_argument('args', nargs='?')
+  p.add_argument("--enable", action="store_true")
+  args = p.parse_args()
+
+  main(args)
+```
 
 ### Web requests
 
