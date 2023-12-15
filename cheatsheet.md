@@ -1,6 +1,9 @@
 # Competitive programming
 
+## Table of Contents
+
 - [Competitive programming](#competitive-programming)
+  - [Table of Contents](#table-of-contents)
   - [Header for C++ contests](#header-for-c-contests)
   - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
   - [Uniform initialization](#uniform-initialization)
@@ -75,6 +78,9 @@
     - [find by content text](#find-by-content-text)
     - [Windows Commands using WSH](#windows-commands-using-wsh)
 
+
+
+---
 
 ## Header for C++ contests
 ```cpp
@@ -1682,7 +1688,7 @@ shell = wc.Dispatch("WScript.Shell")
 shortcut = shell.CreateShortCut(path)
 # Arguments Description FullName Hotkey IconLocation Load RelativePath Save TargetPath WindowStyle WorkingDirectory
 shortcut.TargetPath
-print(shortcut.TargetPath)
+print(path, shortcut.TargetPath, shortcut.Arguments)
 
 shortcut.TargetPath = path_to_the_target_file
 shortcut.Save()
