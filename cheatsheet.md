@@ -5,6 +5,9 @@
 - [Competitive programming](#competitive-programming)
   - [Table of Contents](#table-of-contents)
   - [Header for C++ contests](#header-for-c-contests)
+  - [Dump predefined macros](#dump-predefined-macros)
+  - [Watch memory allocation](#watch-memory-allocation)
+  - [String View](#string-view)
   - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
   - [Uniform initialization](#uniform-initialization)
   - [Copyable Moveable](#copyable-moveable)
@@ -13,6 +16,11 @@
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
+    - [Abbreviated function template, placeholder types](#abbreviated-function-template-placeholder-types)
+  - [Print type name](#print-type-name)
+    - [have compiler spit out the type name](#have-compiler-spit-out-the-type-name)
+    - [utility function for printing type name](#utility-function-for-printing-type-name)
+  - [RAII for malloc/free](#raii-for-mallocfree)
   - [Print a vector](#print-a-vector)
   - [Thread](#thread)
   - [Async thread](#async-thread)
@@ -77,7 +85,7 @@
     - [Find by div](#find-by-div)
     - [find by content text](#find-by-content-text)
     - [Windows Commands using WSH](#windows-commands-using-wsh)
-
+  - [Zoxide](#zoxide)
 
 
 ---
@@ -98,6 +106,61 @@ using vpii = vector<pii>;
 #define trav(a,x) for(auto& a : x)
 #define all(x) begin(x), end(x)
 #define sz(x) (int)(x).size()
+```
+
+## Dump predefined macros
+```text
+echo | g++ -std=c++20 -dM -E -x c++ -
+echo | clang -dM -E -x c++ -
+```
+
+## Watch memory allocation
+```cpp
+void* operator new(std::size_t count)
+{
+  void* ptr = ::malloc(count);
+  cout << "  " << count << " bytes (" << ptr << ")" << endl;
+  return ptr;
+}
+
+void operator delete(void* ptr) noexcept
+{
+  cout << "  delete(" << ptr << ")" << endl;
+  std::free(ptr);
+}
+
+/*
+void operator delete(void* ptr, std::size_t count) noexcept;   // preferred over delete(void*)
+
+void* operator new[](std::size_t count);
+void operator delete[](void* ptr) noexcept;
+void operator delete[](void* ptr, std::size_t count) noexcept;   // preferred over delete[](void*)
+
+struct X {
+  static void* operator new(std::size_t count);
+  static void operator delete(X* ptr) noexcept;
+  static void operator delete(X* ptr, std::size_t count) noexcept;
+
+  static void* operator new[](std::size_t count);
+  static void operator delete[](X* ptr, std::size_t count) noexcept;
+};
+*/
+
+vector v(100); // watch this allocate and free memory
+```
+
+## String View
+```cpp
+#include <string_view>
+
+string_view sv = str;
+string_view sv(data, len);
+string_view sv(c_str);
+string_view sv2 = sv.substr(m, n);
+
+sv.find_first_not_of(' ');
+
+cout << sv << endl;
 ```
 
 ## Rounding up to next integer value
@@ -196,8 +259,77 @@ template<typename T1, typename ...T> auto sum(const T1& x1, const T& ... x) {   
 ### Variadic Template Class
 
 ```cpp
-
 template<typename ...T> class Tuple
+```
+
+### Abbreviated function template, placeholder types
+```cpp
+void f1(auto v);                          |  template<typename T> void f1(T v);
+
+template<typename T, typename U>          |  template<typename T, typename U, typename W>
+void g(T x, U y, auto w);                 |  void g(T x, U y, W w);
+```
+
+## Print type name
+```cpp
+// best option
+#include <boost/type_index.hpp>
+boost::typeindex::type_id_with_cvr<decltype(x)>().pretty_name()
+
+// other options
+#include <typeinfo>
+typeid(expr).name() // | c++filt -t
+
+#include <boost/core/demangle.hpp>
+boost::core::demangle( typeid(expr).name() )
+
+__FUNCSIG__ // MSVC
+__PRETTY_FUNCTION__
+
+type_name<T>()
+
+// typeid(expr) -> type_info
+#include <cxxabi.h>
+int status;
+char* name = typeid(expr).name();
+char* realname = abi::__cxa_demangle(name, nullptr, nullptr, &status);
+free(realname);
+```
+
+### have compiler spit out the type name
+```cpp
+template<typename T> class TypeDisplayer; // no definition, just declaration
+
+SomeComplexType expr;                       // example: const int v = 10; auto expr = &v;
+
+TypeDisplayer<decltype(expr)> xType;        // compiler will spit an error
+// error: ... TypeDisplayer<SomeComplexType> xType has incomplete type ...
+```
+
+### utility function for printing type name
+```cpp
+// usage: cout << type_name<T>() << endl;
+template<T>
+string type_name()
+{
+  using TR = std::remove_reference<T>::type;
+  string name = boost::core::demangle( typeid(TR).name() );
+
+  if (std::is_const<TR>::value)             name += " const";
+  if (std::is_volatile<TR>::value)          name += " volatile";
+  if (std::is_lvalue_reference<T>::value)   name += " &";
+  if (std::is_rvalue_reference<T>::value)   name += " &&";
+
+  return name;
+}
+
+example: type_name<int>()
+// see: https://github.com/willwray/type_name
+```
+
+## RAII for malloc/free
+```cpp
+unique_ptr<T, void(*)(void*)> raii_ptr( static_cast<T*>(::malloc(size)), ::free );
 ```
 
 ## Print a vector
@@ -1692,4 +1824,9 @@ print(path, shortcut.TargetPath, shortcut.Arguments)
 
 shortcut.TargetPath = path_to_the_target_file
 shortcut.Save()
+```
+
+## Zoxide
+```text
+zoxide query -a -l -s
 ```
