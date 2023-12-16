@@ -17,6 +17,9 @@
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
     - [Abbreviated function template, placeholder types](#abbreviated-function-template-placeholder-types)
+    - [template auto](#template-auto)
+  - [Concepts](#concepts)
+    - [Very simple example](#very-simple-example)
   - [Print type name](#print-type-name)
     - [have compiler spit out the type name](#have-compiler-spit-out-the-type-name)
     - [utility function for printing type name](#utility-function-for-printing-type-name)
@@ -270,6 +273,37 @@ template<typename T, typename U>          |  template<typename T, typename U, ty
 void g(T x, U y, auto w);                 |  void g(T x, U y, W w);
 ```
 
+### template auto
+```cpp
+template<auto val>                        |  template<typename T, T val>
+constexpr auto constant = val;            |  constexpr T constant = val;
+
+// example:
+int age = constant<50>;                   |  int age = constant<int, 50>;
+```
+
+## Concepts
+
+A _named set of requirements_ is `Concept`
+
+### Very simple example
+```cpp
+template<typename T>
+concept ConceptName = requires(T a)
+{
+  // satisfied by any type 'T' such that for values 'a' of type 'T', the expression in {...} compiles
+  // and its result satisfies constraint_on_result
+  { ... } -> constraint_on_result
+}
+
+// how to use the concept defined above
+template<ConceptName T>
+void f(T x) { ... }
+
+SomeTypeThatSatisfiesConceptName y;
+f(y);
+```
+
 ## Print type name
 ```cpp
 // best option
@@ -294,6 +328,11 @@ int status;
 char* name = typeid(expr).name();
 char* realname = abi::__cxa_demangle(name, nullptr, nullptr, &status);
 free(realname);
+
+// boost type_name
+#include <boost/compute/type_traits/type_name.hpp>
+
+boost::compute::type_traits::type_name(expr);
 ```
 
 ### have compiler spit out the type name
