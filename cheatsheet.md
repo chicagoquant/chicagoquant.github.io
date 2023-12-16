@@ -195,21 +195,32 @@ Foo foo { 1, 2 };
 class Copyable                                              class NotCopyable
 {                                                           {
 public:                                                     protected:
-    Copyable() = default;                                       NotCopyable() = default;
-    ~Copyable() = default;                                      ~NotCopyable() = default;
+  Copyable() = default;                                       NotCopyable() = default;
+  ~Copyable() = default;                                      ~NotCopyable() = default;
                                                             private:
-    Copyable(Copyable& rhs) = default;                          NotCopyable(const NotCopyable& rhs) = delete;
-    Copyable& operator=(Copyable& rhs) = default;               NotCopyable& operator=(const NotCopyable& rhs) = delete;
+  Copyable(Copyable& rhs) = default;                          NotCopyable(const NotCopyable& rhs) = delete;
+  Copyable& operator=(Copyable& rhs) = default;               NotCopyable& operator=(const NotCopyable& rhs) = delete;
 };                                                          };
 
 class Moveable                                              class NotMoveable
 {                                                           {
 public:                                                     public:
-    Moveable() = default;                                       NotMoveable() = default;
-    ~Moveable() = default;                                      ~NotMoveable() = default;
+  Moveable() = default;                                       NotMoveable() = default;
+  ~Moveable() = default;                                      ~NotMoveable() = default;
                                                             private:
-    Moveable(Moveable&& rhs) = default;                         NotMoveable(NotMoveable&& rhs) = delete;
-    Moveable& operator=(Moveable&& rhs) = default;              NotMoveable& operator=(NotMoveable&& rhs) = delete;
+  Moveable(Moveable&& rhs) = default;                         NotMoveable(NotMoveable&& rhs) = delete;
+  Moveable(const Moveable&& rhs) = default;                   NotMoveable(const NotMoveable& rhs) = delete;
+  Moveable& operator=(Moveable&& rhs) = default;              NotMoveable& operator=(NotMoveable&& rhs) = delete;
+  Moveable& operator=(const Moveable& rhs) = default;         NotMoveable& operator=(const NotMoveable& rhs) = delete;
+};                                                          };
+
+class MoveNoCopy {                                          class NoMoveNoCopy {
+protected:                                                  protected:
+  MoveNoCopy() = default;                                     NoMoveNoCopy() = default;
+  MoveNoCopy(MoveNoCopy&&) = default;                         NoMoveNoCopy(NoMoveNoCopy&&) = delete;
+  MoveNoCopy(const MoveNoCopy&) = delete;                     NoMoveNoCopy(const NoMoveNoCopy&) = delete;
+  MoveNoCopy& operator=(MoveNoCopy&&) = default;              NoMoveNoCopy& operator=(NoMoveNoCopy&&) = delete;
+  MoveNoCopy& operator=(const MoveNoCopy&) = delete;          NoMoveNoCopy& operator=(const NoMoveNoCopy&) = delete;
 };                                                          };
 ```
 
@@ -679,7 +690,7 @@ ThrSafeUniquePtr<MyObj> safe_ptr;
 
 void t1()                                   |   void t2()
 {                                           |   {
-    safe_ptr.publish(new MyObj());          |       MyObj* p = safe_ptr.get(); if (p != nullptr) { ... }
+  safe_ptr.publish(new MyObj());            |     MyObj* p = safe_ptr.get(); if (p != nullptr) { ... }
 }                                           |   }
 ```
 
