@@ -2,6 +2,7 @@
 
 - [Competitive programming](#competitive-programming)
   - [Header for C++ contests](#header-for-c-contests)
+  - [Canonical Class](#canonical-class)
   - [Dump predefined macros](#dump-predefined-macros)
   - [Watch memory allocation](#watch-memory-allocation)
   - [String View](#string-view)
@@ -10,6 +11,9 @@
   - [Copyable Moveable](#copyable-moveable)
   - [Copy into a vector](#copy-into-a-vector)
     - [Copying](#copying)
+  - [Crazy STL](#crazy-stl)
+    - [any, variant, optional](#any-variant-optional)
+    - [Implementation idea](#implementation-idea)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -113,6 +117,39 @@ using vpii = vector<pii>;
 #define trav(a,x) for(auto& a : x)
 #define all(x) begin(x), end(x)
 #define sz(x) (int)(x).size()
+```
+
+## Canonical Class
+
+```cpp
+#include <iostream>
+
+using namespace std;
+
+class A {
+public:
+  // default
+  A() { cout << "A::default ctor(this=" << this << ")\n"; }
+  ~A() { cout << "A::dtor(this=" << this << ")\n"; }
+  A(A const& rhs) { cout << "A::copy ctor(this=" << this << ", const A& rhs=" << &rhs << ")\n"; }
+  A(A&& rhs) { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
+  A& operator=(A const& rhs) { cout << "A::copy assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
+  A& operator=(A&& rhs) { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
+};
+```
+
+Initializations: aggregate, constant, copy, default, direct, list, reference, value, zero
+
+```cpp
+T t = { 'a', "hello", 1, }; // aggregate
+const int T::a = 5; // constant, static const member
+T copy_t = t; // copy
+T t; new T; // default
+T t(some_param); // direct
+T t { 'a', "hello", 1 }; // list
+T& tr = t; // reference
+T t = T(); T{};  // value (empty-initializer)
+static T t; T t(); // zero
 ```
 
 ## Dump predefined macros
@@ -249,6 +286,58 @@ class C {
 
 /* lvalue */                       | /* rvalue */                       | /* l/r-value */
 C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vector<int> v) : vi(move(v)) {}
+```
+
+## Crazy STL
+
+### any, variant, optional
+```cpp
+#include <any>
+any a = 1;
+any b = "hello";
+a = b;
+a = "world";
+any_cast<string>(a)
+a.has_value()
+a.reset()
+a.emplace(ctor args)
+
+vector<any> va = { 1, 20.0, "hello", A(), };
+```
+
+### Implementation idea
+```cpp
+struct any
+{
+  void* data_;
+  std::type_info const& (*getType_)();
+  void* (*clone_)(void* otherData);
+  void (*destroy_)(void* data);
+
+  template<typename T>
+  explicit any(T&& value)
+    : data_{new T{std::forward<T>(value)}}
+    , getType_{[]() -> std::type_info const&{ return typeid(T); }}
+    , clone_([](void* otherData) -> void* { return new T(*static_cast<T*>(otherData)); })
+    , destroy_([](void* data_) { delete static_cast<T*>(data_); })
+  {
+  }
+
+  any(any const& other)
+    : data_(other.clone_(other.data_))
+    , getType_(other.getType_)
+    , clone_(other.clone_)
+    , destroy_(other.destroy_)
+  {
+  }
+
+  ~any()
+  {
+    destroy_(data_);
+  }
+};
+
+// https://www.fluentcpp.com/2021/02/05/how-stdany-works/
 ```
 
 ## Templates
