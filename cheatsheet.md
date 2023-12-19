@@ -3,17 +3,29 @@
 - [Competitive programming](#competitive-programming)
   - [Header for C++ contests](#header-for-c-contests)
   - [Canonical Class](#canonical-class)
+    - [Copy-Move-Swap Idioms](#copy-move-swap-idioms)
   - [Dump predefined macros](#dump-predefined-macros)
   - [Watch memory allocation](#watch-memory-allocation)
-  - [String View](#string-view)
   - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
   - [Uniform initialization](#uniform-initialization)
   - [Copyable Moveable](#copyable-moveable)
   - [Copy into a vector](#copy-into-a-vector)
     - [Copying](#copying)
+  - [CPP Features](#cpp-features)
+    - [Structured binding](#structured-binding)
+    - [Swap](#swap)
   - [Crazy STL](#crazy-stl)
+    - [enable\_if](#enable_if)
+      - [Usage - 4 ways](#usage---4-ways)
     - [any, variant, optional](#any-variant-optional)
-    - [Implementation idea](#implementation-idea)
+      - [Usage - any (type-safe void\*)](#usage---any-type-safe-void)
+      - [Implementation idea - any](#implementation-idea---any)
+      - [Usage - variant (type-safe union)](#usage---variant-type-safe-union)
+      - [Implementation idea - variant](#implementation-idea---variant)
+    - [Tag Dispatch](#tag-dispatch)
+    - [Type Erasure](#type-erasure)
+    - [String View](#string-view)
+    - [Span](#span)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -61,8 +73,6 @@
       - [Option 2 -- lock-free, wait-free queue SPSC (1 producer, 1 consumer)](#option-2----lock-free-wait-free-queue-spsc-1-producer-1-consumer)
   - [Coroutines in C++20](#coroutines-in-c20)
     - [Bare c++](#bare-c)
-  - [CPP Features](#cpp-features)
-    - [Structured binding](#structured-binding)
   - [Timeit](#timeit)
   - [Old school time (nanosec granularity, high resolution)](#old-school-time-nanosec-granularity-high-resolution)
   - [Sleep in your code](#sleep-in-your-code)
@@ -81,15 +91,15 @@
   - [Glossary](#glossary)
   - [Latency numbers](#latency-numbers)
     - [Create Shortcut on windows](#create-shortcut-on-windows)
-  - [Python](#python)
-    - [Python arguments](#python-arguments)
-    - [Web requests](#web-requests)
-    - [Find](#find)
-    - [Find by id](#find-by-id)
-    - [Find by div](#find-by-div)
-    - [find by content text](#find-by-content-text)
-    - [Windows Commands using WSH](#windows-commands-using-wsh)
-  - [Command line](#command-line)
+- [Python](#python)
+  - [Python arguments](#python-arguments)
+  - [Web requests](#web-requests)
+  - [Find](#find)
+  - [Find by id](#find-by-id)
+  - [Find by div](#find-by-div)
+  - [find by content text](#find-by-content-text)
+  - [Windows Commands using WSH](#windows-commands-using-wsh)
+- [Command line](#command-line)
     - [Zoxide](#zoxide)
     - [Start VM](#start-vm)
     - [Export GIT repository](#export-git-repository)
@@ -97,7 +107,10 @@
     - [MinTTY Terminal Bash](#mintty-terminal-bash)
     - [Veracrypt](#veracrypt)
     - [Music download](#music-download)
-
+- [Rust](#rust)
+    - [Rust build commands](#rust-build-commands)
+    - [Rust Basics](#rust-basics)
+    - [More rust things](#more-rust-things)
 
 ---
 
@@ -119,6 +132,34 @@ using vpii = vector<pii>;
 #define sz(x) (int)(x).size()
 ```
 
+Lots of headers
+```cpp
+#include <iostream>
+#include <variant>
+#include <vector>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <cstdint>
+#include <cstdlib>
+
+using namespace std;
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
+int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
+{
+  cout << endl;
+  cout << string(100, '-') << endl;
+}
+
+// flag: -Wno-unused
+```
+
 ## Canonical Class
 
 ```cpp
@@ -132,10 +173,29 @@ public:
   A() { cout << "A::default ctor(this=" << this << ")\n"; }
   ~A() { cout << "A::dtor(this=" << this << ")\n"; }
   A(A const& rhs) { cout << "A::copy ctor(this=" << this << ", const A& rhs=" << &rhs << ")\n"; }
-  A(A&& rhs) { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
-  A& operator=(A const& rhs) { cout << "A::copy assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
-  A& operator=(A&& rhs) { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
+  A(A&& rhs) noexcept { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
+
+  // A& operator=(A const& rhs) { cout << "A::copy assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
+  // A& operator=(A&& rhs) noexcept { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
+
+  // replaces above 2 assignment operators
+  A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
+
+  void swap(A& b) noexcept {
+    cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
+    // member1.swap(b.member1); or std::swap(a.member, b.member);
+    // swap(pointerMember, b.pointerMember);
+    // swap(basicTypeMember, b.basicTypeMember);
+  }
 };
+
+namespace std {
+  // non-member swap, if we don't define, then default implementation will do tmp-move(a)-move(b)-move(tmp)
+  template<>                           // full-specialization required if defininig in std namespace
+  void swap(A& a, A& b) noexcept {
+    a.swap(b);
+  }
+}
 ```
 
 Initializations: aggregate, constant, copy, default, direct, list, reference, value, zero
@@ -150,6 +210,54 @@ T t { 'a', "hello", 1 }; // list
 T& tr = t; // reference
 T t = T(); T{};  // value (empty-initializer)
 static T t; T t(); // zero
+```
+
+### Copy-Move-Swap Idioms
+```cpp
+class A
+{
+  Big big;
+  Pointer* ptr;
+  int v;
+public:
+  A(const A& that) : big(that.big), ptr(nullptr), v(that.v) {
+    ptr = new Pointer(*that.ptr);
+  }
+
+  A(A&& other) : big(std::move(other.big)), ptr(exchange(other.ptr, nullptr)), v(other.v) noexcept {
+  }
+
+  // replaces both copy and move assignment operators: operator=(const A&), operator=(A&&)
+  A& operator=(A that) noexcept {      // create a copy
+    that.swap(*this);         // swap the copy
+    return *this;
+  }
+
+  ~A() {
+    delete ptr;
+  }
+
+  // A& operator=(const A& other) {
+  //   if (this != &other) {
+  //     A tmp(other);
+  //     tmp.swap(*this);
+  //   }
+  //   return *this;
+  // }
+  //
+  // A& operator=(A&& other) noexcept {
+  //   other.swap(*this);
+  //   return *this;
+  // }
+
+  // if we don't define, then default implementation will do tmp-move(a)-move(b)-move(tmp)
+  friend void swap(A& a, A& b) noexcept {  // note: not defining member swap, just using friend non-member swap
+    using std::swap;
+    swap(a.big, b.big);
+    swap(a.ptr, b.ptr);
+    swap(a.v, b.v);
+  }
+};
 ```
 
 ## Dump predefined macros
@@ -191,20 +299,6 @@ struct X {
 */
 
 vector v(100); // watch this allocate and free memory
-```
-
-## String View
-```cpp
-#include <string_view>
-
-string_view sv = str;
-string_view sv(data, len);
-string_view sv(c_str);
-string_view sv2 = sv.substr(m, n);
-
-sv.find_first_not_of(' ');
-
-cout << sv << endl;
 ```
 
 ## Rounding up to next integer value
@@ -288,9 +382,230 @@ class C {
 C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vector<int> v) : vi(move(v)) {}
 ```
 
+## CPP Features
+
+### Structured binding
+
+```cpp
+auto [x, y] = get_point(n);
+
+tuple<int, int> t(100, 200);
+const auto& [x, y] = t;
+
+int a[] = { 1, 3 };
+auto& [x, y] = a;
+
+struct S { int a; int b };
+S s { 1, 10 };
+auto [ x, y ] = s;    // accessible data members, in order declared in struct/class
+
+int a = 1, b = 10;
+const auto& [x, y] = tie(a, b);  // tie creates a tuple of lvalue references
+
+int p, q;
+tie(p, q) = tuple<int, int>(100, 200);
+
+map<int, int> m { {1, 100}, {2, 200}, };
+for (auto [x, y] : m)           | for (auto v : m)
+{                               | {
+  ...                           |   v.first; v.second;
+}                               | }
+```
+
+Compatible type T, if the following metafunctions are available:
+- `std::tuple_size<T>::value` number of T's elements
+- `std::tuple_element<I>::type` type of I-th element
+- `return_type std::get<I>(T)` retrieves I-th element
+
+Already defined for `std::tuple, pair, array`
+
+For a custom class, example:
+
+```cpp
+#include <utility>
+#include <type_traits>
+class A {
+  ...
+  // option 1 for get(), as a member
+  template<size_t I> tuple_element_t<I, A>& get() &
+  {
+    if constexpr (I == 0) return int_val;
+    if constexpr (I == 1) return char_val;
+    ...
+  }
+  ... also need const, rvalue ref ...
+  template<size_t I> tuple_element_t<I, A> const& get() const { ... }
+  template<size_t I> tuple_element_t<I, A>& get() && { ... return std::move(int_val); ... }
+  template<size_t I> tuple_element_t<I, A> const& get() const&& { ... return std::move(int_val); ... }
+  // option 2 for get(), use helper
+  template<size_t I, typename T> auto&& get_helper(T&& t)
+  {
+    static_assert(I < 5, "Index out of bounds for A");
+    if constexpr (I == 0) return std::forward<T>(t).int_val;
+    if constexpr (I == 1) return std::forward<T>(t).char_val;
+    if constexpr (I == 2) return std::forward<T>(t).float_val;
+    ...
+  }
+  template<size_t I> auto&& get() & { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() && { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() const& { return get_helper<I>(*this); }
+  template<size_t I> auto&& get() const&& { return get_helper<I>(*this); }
+  // see alternative get() below, as non-member
+};
+
+namespace std {
+  template<> struct tuple_size<A> { static constexpr size_t value = 5; };
+    // alternative
+  template<> struct tuple_size<A> : integral_constant<size_t, 5> {};
+
+  template<> struct tuple_element<0, A> { using type = int; };
+  template<> struct tuple_element<1, A> { using type = char; };
+  template<> struct tuple_element<2, A> { using type = float; };
+  template<> struct tuple_element<3, A> { using type = string; };
+  template<> struct tuple_element<4, A> { using type = int; };
+    // alternative
+  template<size_t I> struct tuple_element<I, A>
+    : conditional<I == 0, int,
+        conditonal<I == 1, char,
+          conditional<I == 2, float,
+            conditional<I == 3, string, int>
+          >
+        >
+      >
+  {
+    static_assert(I < 5, "Index out of bounds for A">);
+  };
+    // alternative
+  template<size_t I> struct tuple_element<I, A>
+    : tuple_element<I, tuple<int, char, float, string, int>>
+  {};
+
+  // alternative get, possible to do this way for an existing class that can't modify
+  template<size_t I> tuple_element_t<I, A>& get(A& a)
+  {
+    if constexpr (I == 0) return a.int_val;
+    if constexpr (I == 1) return a.char_val;
+    ...
+  }
+
+  // alternative get, using helper
+  template<size_t I, typename T> auto&& A_get_helper(T&& t)
+  {
+    static_assert(I < 5, "Index out of bounds for A");
+    if constexpr (I == 0) return std::forward<T>(t).int_val;
+    if constexpr (I == 1) return std::forward<T>(t).char_val;
+    if constexpr (I == 2) return std::forward<T>(t).float_val;
+  }
+  template<size_t I> auto&& get(A& t) { return A_get_helper<I>(t); }
+  template<size_t I> auto&& get(const A& t) { return A_get_helper<I>(t); }
+  template<size_t I> auto&& get(A&& t) { return A_get_helper<I>(move(t)); }
+  template<size_t I> auto&& get(A const&& t) { return A_get_helper<I>(move(t)); }
+}
+```
+
+See: [C++ on Sea 2020 - S/B uncovered](https://youtu.be/uZCvz-E1heA?t=1592)
+
+### Swap
+
+3 ways to define swap:
+
+```cpp
+// method 1: member swap, std::swap specialization
+namespace X {
+  class A {
+    void swap(A& b) noexcept;               // member swap
+  };
+}
+namespace std {
+  template<>                              // full specialization
+  void swap(A& a, A& b) noexcept { a.swap(b); }    // calls member swap
+}
+
+// method 2: overload std::swap, defined in same scope as class A
+namespace X {
+  class A {
+    void swap(A& b) noexcept;             // member swap
+  };
+
+  // same scope as the class
+  void swap(A& a, A& b) noexcept { a.swap(b); }    // calls member swap
+}
+
+// method 3: define swap() as a friend function
+namespace X {
+  class A {
+    friend void swap(A& a, A& b) noexcept {
+      ...
+    }
+  };
+}
+
+// usage:
+template<typename T>
+void some_func(T& obj)
+{
+  T tmp;
+  using std::swap;
+  swap(tmp, obj);   // would try X::swap() before std::swap()
+}
+```
+
 ## Crazy STL
 
+### enable_if
+
+`enable_if< Condition, SomeType >` -- if `Condition` is true, then `enable_if::type == SomeType`, otherwise it is not defined.
+
+```cpp
+template<typename Cond, typename Type>
+struct enable_if {};                            // empty
+
+template<typename Type>
+struct enable_if<true, Type> {
+  using type = Type;                            // defined when Cond = true
+};
+```
+
+#### Usage - 4 ways
+```cpp
+// usage:
+// #1 - use non-type parameter for template
+template<
+  typename T,
+  enable_if<is_integral<T>::value, Blah>::type = SomeBlahValue    // Cond is true, then this matches
+                                                                  // otherwise, that type is not defined
+                                                                  // and this template definition does not match
+                                                                  // Blah can be int, bool, or anything else, does not matter
+>
+void func() { .... }
+
+// #2 - use return type of function
+template<typename T>
+typename enable_if<Cond>::type            // return type, void (default param)
+foobar()                                  // i.e. function: void foobar(), only if Cond is true
+{}
+
+// #3 - enable via function parameter
+template<typename T>
+void foobar(
+  T t,
+  typename enable_if<Cond>::type* = nullptr   // void* = nullptr, if Cond is true, foobar is not defined if Cond is false
+)
+{}
+
+// #4 - use type parameter for template
+template<
+  typename T,
+  typename = enable_if<Cond>::type          // enabled if Cond is true
+>
+void foobar(T t)
+{}
+```
+
+
 ### any, variant, optional
+
+#### Usage - any (type-safe void*)
 ```cpp
 #include <any>
 any a = 1;
@@ -305,7 +620,7 @@ a.emplace(ctor args)
 vector<any> va = { 1, 20.0, "hello", A(), };
 ```
 
-### Implementation idea
+#### Implementation idea - any
 ```cpp
 struct any
 {
@@ -339,6 +654,168 @@ struct any
 
 // https://www.fluentcpp.com/2021/02/05/how-stdany-works/
 ```
+
+#### Usage - variant (type-safe union)
+```cpp
+variant< int, float > v;
+v = 41;
+int i = get<int>(v);
+int i = get<0>(v);
+get<float>(v); // throws bad_variant_access, stored int above
+
+holds_alternative<int>(v) == true;
+
+visit( [](auto&& val) { cout << val; }, v );
+
+// https://github.com/mpark/variant
+// https://github.com/groundswellaudio/swl-variant
+```
+
+#### Implementation idea - variant
+```cpp
+template<typename ...Types>
+class Variant
+{
+  size_t active_idx;
+  VariadicUnion<Types...> data;
+public:
+  template<typename T>
+    requires (same_as<T, Types> or ... )
+  Variant(T&& v)
+    : active_idx( PackIndex<T, Types...>::value )
+    , data( integral_constant<size_t, PackIndex<T, Types...>::value>(), forward<T>(v) )
+  {}
+
+  // template<typename T> Variant& operator=(T&& v);
+
+  ~Variant() {
+    data.destroy(active_idx);
+  }
+
+  size_t index() const { return active_idx; }
+  
+  template<std::size_t I>
+  auto& get()
+  {
+    assert( I == active_idx );
+    return data.template get<I>();
+  }
+};
+
+// ---------------------------------------------------------------------------
+template<typename T1, typename ...Ts>
+struct PackIndex;
+
+template<typename T1, typename ...Ts>
+struct PackIndex<T1, T1, Ts...>
+  : integral_constant<size_t, 0>
+{};
+
+template<typename T1, typename U1, typename ...Ts>
+struct PackIndex<T1, U1, Ts...>
+  : integral_constant<size_t, 1 + PackIndex<T1, Ts...>::value>
+{};
+
+// ---------------------------------------------------------------------------
+template<typename T1, typename ...Ts>
+union VariadicUnion                // recursive definition of union
+{
+  T1 first;
+  VariadicUnion<Ts...> rest;
+
+  template<typename U>
+  VariadicUnion( integral_constant<size_t, 0>, U&& u)
+    : first( forward<U>(u) )
+  {}
+
+  template<size_t I, typename U>
+  VariadicUnion( integral_constant<size_t, I>, U&& u)
+    : rest( integral_constant<size_t, I-1>(), forward<U>(u) )
+  {}
+
+  template<std::size_t I>
+  auto& get() {
+    if constexpr (I == 0) {
+      return first;
+    }
+    else {
+      return rest.template get<I-1>();
+    }
+  }
+
+  void destroy(std::size_t I)
+  {
+    if (I == 0) {
+      first.~T1();
+    }
+    else {
+      rest.destroy(I-1);
+    }
+  }
+};
+
+template<typename T1>
+union VariadicUnion<T1>                       // base case
+{
+  T1 first;
+
+  template<typename U>
+  VariadicUnion( integral_constant<size_t, 0>, U&& u)
+    : first( forward<U>(u) )
+  {}
+
+  template<std::size_t I>
+  auto& get() { return first; }
+
+  void destroy(std::size_t I)
+  {
+    assert(I == 0);
+    first.~T1();
+  }
+};
+
+// ---------------------------------------------------------------------------
+```
+
+### Tag Dispatch
+
+TBD
+
+### Type Erasure
+
+### String View
+```cpp
+#include <string_view>
+
+string_view sv = str;
+string_view sv(data, len);
+string_view sv(c_str);
+string_view sv2 = sv.substr(m, n);
+
+sv.find_first_not_of(' ');
+
+cout << sv << endl;
+```
+
+### Span
+```cpp
+int arr[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
+vector<int> vec = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
+span<int, 10> arr_span { arr };     // static length
+span<int>     dyn_arr_span { arr }; // dynamic length
+span<int>     vec_span { vec };
+
+span<int> sp = arr_span.subspan(3, 5);
+arr_span.first(4);  // sub-span of first 4 items
+arr_span.last(2);   // sub-span of last 2 items
+
+span<char> sp { s };
+span<char> sp { s, 5 };   // count=5
+
+span<int> sp { begin(vec), end(vec) };
+span<int> sp { begin(vec), 3 };   // count=3
+```
+
 
 ## Templates
 
@@ -1132,129 +1609,6 @@ int main()
 
 ```
 
-## CPP Features
-
-### Structured binding
-
-```cpp
-auto [x, y] = get_point(n);
-
-tuple<int, int> t(100, 200);
-const auto& [x, y] = t;
-
-int a[] = { 1, 3 };
-auto& [x, y] = a;
-
-struct S { int a; int b };
-S s { 1, 10 };
-auto [ x, y ] = s;    // accessible data members, in order declared in struct/class
-
-int a = 1, b = 10;
-const auto& [x, y] = tie(a, b);  // tie creates a tuple of lvalue references
-
-int p, q;
-tie(p, q) = tuple<int, int>(100, 200);
-
-map<int, int> m { {1, 100}, {2, 200}, };
-for (auto [x, y] : m)           | for (auto v : m)
-{                               | {
-  ...                           |   v.first; v.second;
-}                               | }
-```
-
-Compatible type T, if the following metafunctions are available:
-- `std::tuple_size<T>::value` number of T's elements
-- `std::tuple_element<I>::type` type of I-th element
-- `return_type std::get<I>(T)` retrieves I-th element
-
-Already defined for `std::tuple, pair, array`
-
-For a custom class, example:
-
-```cpp
-#include <utility>
-#include <type_traits>
-class A {
-  ...
-  // option 1 for get(), as a member
-  template<size_t I> tuple_element_t<I, A>& get() &
-  {
-    if constexpr (I == 0) return int_val;
-    if constexpr (I == 1) return char_val;
-    ...
-  }
-  ... also need const, rvalue ref ...
-  template<size_t I> tuple_element_t<I, A> const& get() const { ... }
-  template<size_t I> tuple_element_t<I, A>& get() && { ... return std::move(int_val); ... }
-  template<size_t I> tuple_element_t<I, A> const& get() const&& { ... return std::move(int_val); ... }
-  // option 2 for get(), use helper
-  template<size_t I, typename T> auto&& get_helper(T&& t)
-  {
-    static_assert(I < 5, "Index out of bounds for A");
-    if constexpr (I == 0) return std::forward<T>(t).int_val;
-    if constexpr (I == 1) return std::forward<T>(t).char_val;
-    if constexpr (I == 2) return std::forward<T>(t).float_val;
-    ...
-  }
-  template<size_t I> auto&& get() & { return get_helper<I>(*this); }
-  template<size_t I> auto&& get() && { return get_helper<I>(*this); }
-  template<size_t I> auto&& get() const& { return get_helper<I>(*this); }
-  template<size_t I> auto&& get() const&& { return get_helper<I>(*this); }
-  // see alternative get() below, as non-member
-};
-
-namespace std {
-  template<> struct tuple_size<A> { static constexpr size_t value = 5; };
-    // alternative
-  template<> struct tuple_size<A> : integral_constant<size_t, 5> {};
-
-  template<> struct tuple_element<0, A> { using type = int; };
-  template<> struct tuple_element<1, A> { using type = char; };
-  template<> struct tuple_element<2, A> { using type = float; };
-  template<> struct tuple_element<3, A> { using type = string; };
-  template<> struct tuple_element<4, A> { using type = int; };
-    // alternative
-  template<size_t I> struct tuple_element<I, A>
-    : conditional<I == 0, int,
-        conditonal<I == 1, char,
-          conditional<I == 2, float,
-            conditional<I == 3, string, int>
-          >
-        >
-      >
-  {
-    static_assert(I < 5, "Index out of bounds for A">);
-  };
-    // alternative
-  template<size_t I> struct tuple_element<I, A>
-    : tuple_element<I, tuple<int, char, float, string, int>>
-  {};
-
-  // alternative get, possible to do this way for an existing class that can't modify
-  template<size_t I> tuple_element_t<I, A>& get(A& a)
-  {
-    if constexpr (I == 0) return a.int_val;
-    if constexpr (I == 1) return a.char_val;
-    ...
-  }
-
-  // alternative get, using helper
-  template<size_t I, typename T> auto&& A_get_helper(T&& t)
-  {
-    static_assert(I < 5, "Index out of bounds for A");
-    if constexpr (I == 0) return std::forward<T>(t).int_val;
-    if constexpr (I == 1) return std::forward<T>(t).char_val;
-    if constexpr (I == 2) return std::forward<T>(t).float_val;
-  }
-  template<size_t I> auto&& get(A& t) { return A_get_helper<I>(t); }
-  template<size_t I> auto&& get(const A& t) { return A_get_helper<I>(t); }
-  template<size_t I> auto&& get(A&& t) { return A_get_helper<I>(move(t)); }
-  template<size_t I> auto&& get(A const&& t) { return A_get_helper<I>(move(t)); }
-}
-```
-
-See: [C++ on Sea 2020 - S/B uncovered](https://youtu.be/uZCvz-E1heA?t=1592)
-
 ## Timeit
 ```cpp
 #include <chrono>
@@ -1762,6 +2116,12 @@ __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\
   - LTO link time optimization, LTCG link time code generation, `g++ -flto a.cpp b.cpp -o main`
   - Devirtualization, at LTO time, speculative devirtualization
 
+- C++ Idioms
+  - Empty base class optimization
+  - CRTP
+  - RAII
+  - Tag dispatching
+  - Type erasure
 
 ## Latency numbers
 
@@ -1838,9 +2198,9 @@ shortcut "f:\Program Files" "c:\temp\MyShortcuts" "Program Files Folder" "" "" "
 See: https://www.nirsoft.net/utils/nircmd2.html
 ```
 
-## Python
+# Python
 
-### Python arguments
+## Python arguments
 ```python
 import argparse
 
@@ -1859,7 +2219,7 @@ if __name__ == '__main__':
   main(args)
 ```
 
-### Web requests
+## Web requests
 
 ```python
 import requests
@@ -1910,7 +2270,7 @@ soup.body.find_all(string='python') = soup.body(string='python')
 </div>
 ```
 
-### Find
+## Find
 ```python
 soup.find_all('b')
 soup.find_all(re.compile("^b"))     # import re, matches body, b, ...
@@ -1922,13 +2282,13 @@ soup.find_all(name, attrs, recursive, string, limit, ...)
                                     # attrs ~ id, class_, dict(attr, val) ...
 ```
 
-### Find by id
+## Find by id
 ```python
 results = soup.find(id='SomeId')
 results.prettify()
 ```
 
-### Find by div
+## Find by div
 ```python
 items = soup.find_all('div', class_='SomeClass')
 for item in items:
@@ -1939,7 +2299,7 @@ for item in items:
   child_item.text.strip()
 ```
 
-### find by content text
+## find by content text
 ```python
 all_h2 = results.find_all('h2')
 all_h2 = results.find_all('h2', string='...')
@@ -1954,7 +2314,7 @@ for h2_item in all_h2:
 
 See also: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 
-### Windows Commands using WSH
+## Windows Commands using WSH
 
 ```python
 import win32com.client as wc
@@ -1969,7 +2329,7 @@ shortcut.TargetPath = path_to_the_target_file
 shortcut.Save()
 ```
 
-## Command line
+# Command line
 ### Zoxide
 ```text
 zoxide query -a -l -s
@@ -2023,3 +2383,271 @@ yt-dlp --extract-audio --audio-quality 0 --audio-format opus url
 # https://github.com/yt-dlp/yt-dlp
 ```
 
+# Rust
+
+### Rust build commands
+```shell
+cargo new proj
+cargo build
+cargo run
+cargo check
+cargo build --release
+
+rustc main.rs
+```
+
+### Rust Basics
+```rust
+fn main() { println!("Hello world!"); }
+
+let val = 10;                                   // immutable
+assert_eq(val, 10);
+assert!(val == 10);
+
+println!("val={}", val);
+let val: i64 = 10;                              // with specified type
+
+// data types, scalars
+u8, u16, u32, u64, u128, usize                  // usize - architecture dependent 64-bit vs 32-bit
+i8, i16, i32, i64, i128, isize                  // default integer type is: i32
+f32, f64                                        // default f64
+bool                                            // true, false
+char                                            // 4-bytes, unicode scalar value. 'a'
+
+// compound data types
+let tup: (i32, f64, char) = (500, 6.9, 'A');    // tuple
+let (x, y, z) = tup;                            // destructuring
+tup.0, tup.1, tup.2                             // indexing
+()                                              // empty tuple, called 'unit'
+
+let arr = [1, 2, 3, 4];
+let arr = [100; 5];                             // [ 100, 100, 100, 100 ], repeat 100 x 5 times
+
+for i in 0..5 { ... }                           // [from, to)
+if i%2 == 0 { ... } else { ... }
+
+let mut sum = 0;                                // mutable
+sum += 10;
+
+i as f64;                                       // cast int to float
+
+fn sqr(x: f64) -> f64 { x*x }                   // fn with param and return type, last expression in {} is returned
+fn sqr(x: f64) -> f64 { return x*x; }
+
+fn by_ref(x: &i32) -> i32 { *x+1 }              // ref: &v, deref: *v, immutable
+let i = 10;
+by_ref(&i);
+
+fn square_it(x: &mut f64) { *x *= *x; }         // mutable ref
+
+let f: f64 = 1.0;
+f.cos()
+f.abs()
+
+use std::f64::consts;
+consts::PI;
+
+let arr = [1,2,3,4];                            // array type is [i32; 4], [type; len]
+arr[i];
+arr.len()
+println!("arr: {:?}", arr);                     // debug print for array
+let slice = &arr[i..j];
+let slice = &arr;
+let slice = &arr[i..];
+
+for x in arr { ... }
+
+fn sum(arr: &[i32]) -> i32 { ... }              // passing array/slice to a function
+sum(&arr);                                      // & is called "borrow", means pass by reference, borrowed from original owner
+sum(&arr[2..3]);                                // calling fn with array/slice
+
+let arr = [1,2,3,4,5,6];
+let item_ref = arr.get(i);                      // returns Option<&i32> (containing a reference to i32) -- Some / None
+let first_ref = arr.get(0);                     // first: Some(1)
+let last_ref = arr.get(100);                    // last: None
+first_ref.is_some()                             // true
+last_ref.is_none()                              // true
+*first_ref.unwrap()                             // value stored in Some is &i32, dereference with *
+*first_ref.unwrap_or(&-1)                       // will return value in first or if it is None, then will return -1
+
+let mut v = Vec::new();
+v.push(10);
+v.pop();
+v.extend(10..60);
+v.insert(3, 200);                               // inefficient
+v.remove(10);                                   // inefficient
+v.clear();                                      // size = 0, capacity = unchanged
+v.sort();                                       // in-place sorting
+v.dedup();
+let v_copy = v.clone();
+
+let first = v[0];
+let maybe_first = v.get(0);                     // Option<&i32>
+sum(&v);                                        // Vector converts to slice[i32], coercing Vec<T> -> &[T]
+let slice = &v[1..];                            // slice borrows the memory owned by Vector, vec manages lifetime of memory
+
+let iter = 0..10;
+iter.next()
+assert!(iter.next() == Some(0));
+assert!(Iter.next() == None);
+
+let iter = arr.iter();
+for i in arr.iter() { ... }
+for i in slice { ... }
+
+let s1: i32 = (0..5).sum();
+let s2: i32 = [10, 20, 30].iter().sum();
+let s3: i32 = arr.iter().sum();
+let s4: i32 = slice.iter().sum();
+
+for w in slice.windows(5) { ... }               // w is a sub-slice of size 5, we get sliding windows in the loop
+
+for c in slice.chunks(4) { ... }                // c is a sub-slice of size 4, we get disjoint chunks
+
+let v1 = vec![10, 20, 30, 40];
+assert_eq(v1, &[10, 20, 30, 40]);
+
+// String vs &str (string slice)                String = Vec<u8>    &str = &[u8]
+let text = "hello world";
+dump(text);
+let s = text.to_string();                       // String
+dump(&s);                                       // String s coerced to &str
+
+fn dump(s: &str) {                              // takes a string slice &str, not String
+  println!("str: '{}'", s);
+}
+
+s.push('A');
+s.push_str("ha!");
+s += "ahoy!";
+s += &s2.to_string();                           // += needs a &str, to_string() returns String
+s.pop();
+assert_eq!(s, "abcd");
+
+let text_slice = &text[1..];
+let string_slice = &s[1..];
+
+let char_iter = text.chars();
+char_iter.count();
+text.chars().count();
+for ch in text.chars() { ... }                    // ch is 4-byte unicode code point, char type
+
+text.len();
+let maybe = text.find('w');
+if maybe.is_some() { &text[maybe.unwrap()..] }
+&text[from..to]                                   // only use from, to returned by a string method like find(),
+                                                  // should align with unicode char boundary
+
+let words: Vec<&str> = text.split_whitespace().collect(); // collect() needs a cue, to return Vec<&str>, infers from type
+let stripped: String =
+        text.chars()                              // iterator
+          .filter(|ch| !ch.is_whitespace())       // closure (aka lambda or anonymous function)
+          .collect()                              // cue is to return String
+        ;
+
+for arg in std::env::args() { ... }
+let args: Vec<String> = std::env::args().skip(1).collect();
+if args.len() > 0 { ... }
+
+use std::env;
+let first_arg = env::args().nth(1).expect("Required argument not found");
+                                                    // .expect() is like unwrap(), but with a readable message
+let n: i32 = first_arg.parse().expect("Expected an integer arg");
+                                                    // convert string to number
+
+match text.find('h') {
+  Some(idx) => { ... text[idx..]} ... },
+  None => { ... some message ... }
+};
+
+if let Some(idx) = text.find('h') {
+  ... text[idx..] ...
+}
+else {
+  ... some message ...
+}
+
+let text = match n {
+  0 => "zero",
+  1 => "one",
+  2 => "two",
+  _ => "many",
+};
+
+let text = match r {
+  0...3 => "small",
+  4...6 => "medium",
+  _ => "large",
+};
+
+use std::fs::File;
+use std::io::Read;
+
+let mut file = File::open(&filename).expect("failed to open the file");
+let mut data = String::new();
+file.read_to_string(&mut data).expect("cannot read the file");
+data.len();
+file.read_to_end()
+
+// Option = Some | None, use unwrap(), expect()
+// Result = Ok | Error, can use unwrap(), expect()   -- example: Result<i32, String>, Result<String, io::Error>
+
+use std::env;
+use std::fs::File;
+use std::io::Read;
+use std::io;
+
+fn read_to_string(filename: &str) -> io::Result<String> {       // io::Result<T> is same as Result<T, io::Error>
+  let mut file = File::open(&filename)?;                        // note: ? operator, returns on error
+  let mut text = String::new();
+  file.read_to_string(&mut text)?;                              // note: ? operator, returns on error
+  Ok(text)                                                      // no errors, so return io::Result = Ok(string)
+}
+
+// equivalent to this expanded version
+fn read_to_string(filename: &str) -> Result<String, io::Error> {
+  let mut file = match File::open(&filename) {
+    Ok(f) => f,                                                 // file handle f
+    Err(e) => return Err(e),                                    // return if failed to open file
+  };
+  let mut text = String::new();
+  match file.read_to_string(&mut text) {
+    Ok(_) => Ok(text),
+    Err(e) => Err(e),
+  }
+}
+
+let mut input_str = String::new();
+io::stdin()
+    .read_line(&mut input_str)
+    .expect("Failed to read line")
+  ;
+let num: i64 = input_str
+    .trim()
+    .parse()
+    .expect("Failed to parse number")
+  ;
+
+// https://stevedonovan.github.io/rust-gentle-intro/1-basics.html
+
+// https://stevedonovan.github.io/rust-gentle-intro/2-structs-enums-lifetimes.html
+```
+
+### More rust things
+```rust
+struct User {
+  active: bool,
+  username: String,
+  email: String,
+  sign_in_count: u64,
+}
+
+fn main() {
+  let user1 = User {
+    active: true,
+    username: String::from("james smith"),
+    email: String::from("nospam@gmail.com"),
+    sign_in_count: 1,
+  };
+}
+```
