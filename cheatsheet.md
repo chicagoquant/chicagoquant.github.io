@@ -787,7 +787,11 @@ TBD
 ### Type Erasure
 
 ```mermaid
+---
+title: Type Erasure
+---
 classDiagram
+
 class Object {
   Ctor~T~(T)
   foo()
@@ -811,10 +815,19 @@ class T {
 note for Model "delegates to T.foo()"
 
 Concept <|-- Model
-Object o-- Concept
-T <-- Model~T~
+Object o-- Concept : obj
+Model~T~ --> T : inst
 
-note "Object.foo -> Concept.foo -> Model<T>.foo -> T.foo"
+note "Object.foo -> Concept.foo -> Model<T>.foo -> T.foo()\no1 = Object(MyClass1());\no1.foo();\no2 = Object(MyClass2());\no2.foo()"
+
+class MyClass1 {
+  foo()
+}
+
+class MyClass2 {
+  foo()
+}
+
 ```
 
 ### std string view
