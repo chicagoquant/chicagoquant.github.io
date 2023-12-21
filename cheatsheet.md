@@ -786,7 +786,36 @@ TBD
 
 ### Type Erasure
 
-TBD
+```mermaid
+classDiagram
+class Object {
+  Ctor~T~(T)
+  foo()
+  obj : Concept
+}
+
+class Concept {
+  <<interface>>
+  foo()
+}
+
+class Model~T~ {
+  inst : T
+  foo()
+}
+
+class T {
+  foo()
+}
+
+note for Model "delegates to T.foo()"
+
+Concept <|-- Model
+Object o-- Concept
+T <-- Model~T~
+
+note "Object.foo -> Concept.foo -> Model<T>.foo -> T.foo"
+```
 
 ### std string view
 ```cpp
