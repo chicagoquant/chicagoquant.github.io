@@ -782,7 +782,23 @@ union VariadicUnion<T1>                       // base case
 
 ### Tag Dispatch
 
-TBD
+Use a type to overload an implementation
+
+```cpp
+Iter advance(Iter iter, int skip, RandomIterator)
+{
+  return iter + skip;
+}
+
+Iter advance(Iter iter, int skip, ForwardIterator)
+{
+  while (skip > 0) {
+    iter++;
+    --skip;
+  }
+  return iter;
+}
+```
 
 ### Type Erasure
 
@@ -827,7 +843,6 @@ class MyClass1 {
 class MyClass2 {
   foo()
 }
-
 ```
 
 ### std string view
@@ -866,6 +881,8 @@ span<int> sp { begin(vec), 3 };   // count=3
 
 ### std function
 
+`std::function` is a polymorphic callable wrapper, is implemented using type-erasure idiom.
+
 ```cpp
 #include <iostream>
 #include <functional>
@@ -900,8 +917,6 @@ for (auto& f : arr) {
   cout << f(5.0, 2.5) << endl;
 }
 ```
-
-`std::function` is implemented using type-erasure idiom.
 
 ### lambda expanded
 ```cpp
