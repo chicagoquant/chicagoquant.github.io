@@ -15,7 +15,7 @@
     - [Structured binding](#structured-binding)
     - [Swap](#swap)
   - [Crazy STL](#crazy-stl)
-    - [enable\_if](#enable_if)
+    - [enable if](#enable-if)
       - [Usage - 4 ways](#usage---4-ways)
     - [any, variant, optional](#any-variant-optional)
       - [Usage - any (type-safe void\*)](#usage---any-type-safe-void)
@@ -24,8 +24,10 @@
       - [Implementation idea - variant](#implementation-idea---variant)
     - [Tag Dispatch](#tag-dispatch)
     - [Type Erasure](#type-erasure)
-    - [String View](#string-view)
-    - [Span](#span)
+    - [std string view](#std-string-view)
+    - [std span](#std-span)
+    - [std function](#std-function)
+    - [lambda expanded](#lambda-expanded)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -145,6 +147,7 @@ Lots of headers
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
+#include <boost/core/demangle.hpp>
 
 using namespace std;
 
@@ -552,7 +555,7 @@ void some_func(T& obj)
 
 ## Crazy STL
 
-### enable_if
+### enable if
 
 `enable_if< Condition, SomeType >` -- if `Condition` is true, then `enable_if::type == SomeType`, otherwise it is not defined.
 
@@ -783,7 +786,9 @@ TBD
 
 ### Type Erasure
 
-### String View
+TBD
+
+### std string view
 ```cpp
 #include <string_view>
 
@@ -797,7 +802,7 @@ sv.find_first_not_of(' ');
 cout << sv << endl;
 ```
 
-### Span
+### std span
 ```cpp
 int arr[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
 vector<int> vec = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
@@ -816,6 +821,77 @@ span<int> sp { begin(vec), end(vec) };
 span<int> sp { begin(vec), 3 };   // count=3
 ```
 
+
+### std function
+
+```cpp
+#include <iostream>
+#include <functional>
+
+using namespace std;
+using namespace std::placeholders;
+
+inline double add(double a, double b) { return a+b; }
+
+struct Sub {
+  double operator()(double a, double b) { return a-b; }
+};
+
+inline double multThree(double a, double b, double c) {
+  return a*b*c;
+}
+
+Sub sub;
+
+auto mult = std::bind(multThree, _1, _2, 1.0);
+
+auto div = [](double a, double b) { return a/b; };
+
+std::function<double(double,double)> arr[] = {
+  add,        // function
+  sub,        // function object
+  mult,       // function object created by bind
+  div,        // lambda expression
+};
+
+for (auto& f : arr) {
+  cout << f(5.0, 2.5) << endl;
+}
+```
+
+`std::function` is implemented using type-erasure idiom.
+
+### lambda expanded
+```cpp
+int x, y;
+auto f = [&x, y](double a, double b) { return (a+b+x+y); };
+
+// equivalent to:
+class Lambda
+{
+  // closure
+  int &x;
+  int y;
+public:
+  Lambda(int& x, int& y) : x(x), y(y) {}
+
+  // callable, note this will become a template function lambda uses auto for params
+  double operator()(double a, double b) const { return a+b+x+y; }
+
+  // not really necessary, this is getting generated when I assign lambda to a std::function
+  using retType = double (*)(double, double);
+  constexpr operator retType() const noexcept { return invoke; }
+  static double invoke(double a, double b) {
+    Lambda l{};
+    return l.operator()(a, b);
+  }
+};
+
+Lambda f{x, y}; // closure x, y
+
+f.operator()(1.9, 2.3);    // callable
+
+```
 
 ## Templates
 
