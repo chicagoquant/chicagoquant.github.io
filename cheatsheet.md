@@ -24,10 +24,15 @@
       - [Implementation idea - variant](#implementation-idea---variant)
     - [Tag Dispatch](#tag-dispatch)
     - [Type Erasure](#type-erasure)
+    - [CRTP](#crtp)
+    - [Return type resolver](#return-type-resolver)
+    - [virtual constructor idiom](#virtual-constructor-idiom)
     - [std string view](#std-string-view)
     - [std span](#std-span)
     - [std function](#std-function)
     - [lambda expanded](#lambda-expanded)
+    - [Using lambdas](#using-lambdas)
+    - [std bind](#std-bind)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -147,6 +152,7 @@ Lots of headers
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
+#include <numeric>
 #include <boost/core/demangle.hpp>
 
 using namespace std;
@@ -785,18 +791,26 @@ union VariadicUnion<T1>                       // base case
 Use a type to overload an implementation
 
 ```cpp
-Iter advance(Iter iter, int skip, RandomIterator)
+struct RandomIteratorTag {};
+struct ForwardIteratorTag {};
+
+void advance_impl(Iter& iter, int skip, RandomIteratorTag)
 {
-  return iter + skip;
+  iter += skip;
 }
 
-Iter advance(Iter iter, int skip, ForwardIterator)
+void advance_impl(Iter& iter, int skip, ForwardIteratorTag)
 {
   while (skip > 0) {
     iter++;
     --skip;
   }
   return iter;
+}
+
+void advance(Iter& iter, int dist)
+{
+  advance_impl(iter, dist, Iter::category)
 }
 ```
 
@@ -842,6 +856,202 @@ class MyClass1 {
 
 class MyClass2 {
   foo()
+}
+```
+
+Example:
+```cpp
+class Wrapper {
+  Concept* concept;
+
+  class Concept {
+  public:
+    virtual void foobar() = 0;
+  };
+
+  template<typename T>
+  class Model : public Concept {
+    T instance;
+  public:
+    Model(T& o) : instance(o) {}
+
+    void foobar() override final {
+      instance.foobar();
+    }
+  };
+
+public:
+  template<typename T>
+  Wrapper(T&& o) : concept(new Model<T>(o)) {}
+  ~Wrapper() { delete concept; }
+
+  void foobar() {
+    concept->foobar();
+  }
+};
+
+class MyImpl1 {
+public:
+  void foobar() {
+    cout << "Impl 1" << endl;
+  }
+};
+
+class MyImpl2 {
+public:
+  void foobar() {
+    cout << "Impl 1" << endl;
+  }
+};
+
+vector<Wrapper> v;
+v.push_back(MyImpl1());
+v.push_back(MyImpl2());
+
+for (auto& x : v) {
+  x.foobar();         // will call MyImpl1/MyImpl2 foobar()
+}
+```
+
+### CRTP
+
+```mermaid
+---
+title: CRTP
+---
+
+classDiagram
+class Base["Base< Derived >"] {
+  + someBigCommonFunction()
+}
+
+class Base1~Derived1~ {
+  + someBigCommonFunction()
+}
+
+class Base2~Derived2~ {
+  + someBigCommonFunction()
+}
+
+note "calls Derived->customFooBar()"
+
+class Derived1 {
+  + customFooBar()
+}
+
+class Derived2 {
+  + customFooBar()
+}
+Base1 <|-- Derived1
+Base2 <|-- Derived2
+```
+
+```cpp
+template<typename Derived>
+class Base
+{
+  // calls foobar() which is customized in derived classes
+  void someBigCommonFunctionWith1Difference()
+  {
+    ...
+    static_cast<Derived*>(this)->foobar();
+    ...
+  }
+};
+
+class Derived1 : public Base<Derived1>
+{
+public:
+  void foobar()
+  {
+    cout << "Custom definition of Derived1.foobar\n";
+  }
+};
+
+class Derived2 : public Base<Derived2>
+{
+public:
+  void foobar()
+  {
+    cout << "Custom definition of Derived2.foobar\n";
+  }
+};
+
+Derived1 d1;
+Derived2 d2;
+d1.someBigCommonFunctionWith1Difference();
+d2.someBigCommonFunctionWith1Difference();
+```
+
+### Return type resolver
+```cpp
+class MakeContainer
+{
+    int size;
+  public:
+    explicit MakeContainer(int size) : size(size) {}
+
+    template<typename Container>
+    operator Container()                  // conversion operator
+    {
+      Container c(size);
+
+      return c;
+    }
+};
+
+// deduce which conversion operator to call from type of variable used for return value
+vector<int> vi = MakeContainer(9);    // will create vector of int
+list<A> va = MakeContainer(2);        // will create list of A
+
+// does not even have to use templates for conversion operator
+
+class FromString
+{
+  const string& source;
+public:
+  explicit FromString(const string& src) : source(src) {}
+
+  operator int() { return stoi(source); }
+  operator double() { return stod(source); }
+};
+
+int ival = FromString("1122");          // implicit: FromString(...).operator int()
+double dval = FromString("0.5");
+```
+
+### virtual constructor idiom
+
+```cpp
+struct IAnimal abstract
+{
+  virtual IAnimal* createNew() = 0;
+  virtual IAnimal* copy() = 0;
+};
+
+template<typename Concrete>
+struct AnimalBase : public IAnimal
+{
+  IAnimal* createNew() override final
+  {
+    return new Concreate();
+  }
+
+  IAnimal* copy() override final
+  {
+    return new Concrete(*static_cast<const Concrete*>(this));
+  }
+};
+
+struct Dog : public AnimalBase<Dog> {};
+struct Cat : public AnimalBase<Cat> {};
+
+void foo()
+{
+  IAnimal* animal = new Dog();
+
+  IAnimal* new_dog = animal->createNew();
+  IAnimal* dog_copy = animal->copy();
 }
 ```
 
@@ -918,6 +1128,8 @@ for (auto& f : arr) {
 }
 ```
 
+
+
 ### lambda expanded
 ```cpp
 int x, y;
@@ -947,6 +1159,35 @@ public:
 Lambda f{x, y}; // closure x, y
 
 f.operator()(1.9, 2.3);    // callable
+```
+
+### Using lambdas
+```cpp
+auto sumInt = [](int a, int b) { return a+b; };             // ordinary
+
+auto addAnything = [](auto a, auto b) { return a+b; };      // can pass any type data for a, b
+
+auto sumDec = [](auto a, decltype(a) b) { return a+b; };    // not any b, convertible to type of 'a'
+
+auto sumTmpl = []<typename T>(T a, T b) { return a+b; };    // templatized
+```
+
+### std bind
+```cpp
+#include <functional>
+
+using namespace std::placeholders;
+
+double divide(double a, double b) { return a/b; }
+
+auto calcOneByTwo = bind(divide, 1.0, 2.0);       // we get a callable object
+double half = calcOneByTwo();                     // call that callable
+
+auto inverse = bind(divide, 1.0, _1);             // 1st param is bound, 2nd is free, placeholder
+double half = inverse(2.0);
+
+auto twice = bind(divide, _1, 0.5);              // 2nd arg is bound
+double ten = twice(5.0);
 
 ```
 
