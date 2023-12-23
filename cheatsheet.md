@@ -3,6 +3,7 @@
 - [Competitive programming](#competitive-programming)
   - [Header for C++ contests](#header-for-c-contests)
   - [Canonical Class](#canonical-class)
+    - [Overloads of class function -- ref, const-ref, rvalue, const-rvalue](#overloads-of-class-function----ref-const-ref-rvalue-const-rvalue)
     - [Copy-Move-Swap Idioms](#copy-move-swap-idioms)
   - [Dump predefined macros](#dump-predefined-macros)
   - [Watch memory allocation](#watch-memory-allocation)
@@ -32,7 +33,9 @@
     - [std function](#std-function)
     - [lambda expanded](#lambda-expanded)
     - [Using lambdas](#using-lambdas)
+    - [Class Template Argument Deduction (CTAD)](#class-template-argument-deduction-ctad)
     - [std bind](#std-bind)
+    - [sort](#sort)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -219,6 +222,33 @@ T t { 'a', "hello", 1 }; // list
 T& tr = t; // reference
 T t = T(); T{};  // value (empty-initializer)
 static T t; T t(); // zero
+```
+
+### Overloads of class function -- ref, const-ref, rvalue, const-rvalue
+```
+template<typename T>
+class X {
+  constexpr T&        get_value() &       { return get_value_impl(*this); }
+  constexpr const T&  get_value() const&  { return get_value_impl(*this); }
+  constexpr T&&       get_value() &&      { return get_value_impl(move(*this)); }
+  constexpr const T&& get_value() const&& { return get_value_impl(move(*this)); }
+
+  template<typename Opt>
+  static decltype(auto) get_value_impl(Opt&& opt) {
+    return forward<Opt>(opt).val_;
+  }
+  T val_;
+};
+
+// better, with C++23
+template<typename T>
+class X {
+  template<typename Self>
+  constexpr auto&& get_value(this Self&& self) {  // not valid before C++23
+    return forward<Self>(self).val_;
+  }
+  T val_;
+};
 ```
 
 ### Copy-Move-Swap Idioms
@@ -1128,15 +1158,13 @@ for (auto& f : arr) {
 }
 ```
 
-
-
 ### lambda expanded
 ```cpp
 int x, y;
 auto f = [&x, y](double a, double b) { return (a+b+x+y); };
 
 // equivalent to:
-class Lambda
+class Lambda  // closure type
 {
   // closure
   int &x;
@@ -1145,8 +1173,10 @@ public:
   Lambda(int& x, int& y) : x(x), y(y) {}
 
   // callable, note this will become a template function lambda uses auto for params
-  double operator()(double a, double b) const { return a+b+x+y; }
+  double operator()(double a, double b) const              // const callable, unless mutable lambda
+  { return a+b+x+y; }
 
+  // oh i get it now, this is so that it can be implicitly
   // not really necessary, this is getting generated when I assign lambda to a std::function
   using retType = double (*)(double, double);
   constexpr operator retType() const noexcept { return invoke; }
@@ -1172,6 +1202,220 @@ auto sumDec = [](auto a, decltype(a) b) { return a+b; };    // not any b, conver
 auto sumTmpl = []<typename T>(T a, T b) { return a+b; };    // templatized
 ```
 
+More examples:
+```cpp
+[](const Person& a, const Person& b) { return a.name < b.name; }
+    // immutable closure, it is a const function
+    // return type - deduced - bool, can instead give trailing return type
+    // not noexcept by default, if needed, can declare with noexcept
+
+[](const Person& a, const Person& b) -> bool { return a.name < b.name; }
+[](const Person& a, const Person& b) mutable { return a.name < b.name; }
+[](const Person& a, const Person& b) noexcept { return a.name < b.name; }
+
+[](int i) { return i*i; }
+    // lambda expressions with empty closure can be used as function pointers
+    // void foo(int (*)(int) f); foo([](int i) {return i*i; });
+auto* fptr = +[](int i) { return i*i; };          // idiom: unary plus operator trick
+{ int i, j = 0; auto f = [=] { return i==j; }}    // capture by value, =
+    // only capture local variables, can not capture global/static variables
+{ int i, j = 0; auto f = [&] { return i==j; }}    // capture by reference, &
+
+struct X {
+  int i_; 
+  void foo() {
+    auto f = [this] {                             // capture this, to use members i_
+      cout << i_;                                 // __this->i_
+    };
+    ...
+  }
+};
+
+int foo() {
+  static int k = 42;
+  int m = 100;
+  auto f = [=] { ++k; --m; };                     // not going to capture 'k' by value, 'm' is by val
+  f();                                            // will modify that outer k, local m is not changed
+  return k;                                       // will return 43
+}
+
+// idiom: immediately invoked function expression (IIFE)
+[] {...} ();                                      // call it immediately, temporary lambda
+const Foo foo = [] {
+  if (hasDatabase) { return getFooFromDatabase(); }
+  else { return getFooFromElsewhere(); }
+} ();                                             // trick to conditional initialization
+
+v.emplace_back([] {...}());                       // similar idea, passing return value of lambda
+v.emplace_back(invoke([] { ...}));                // explicitly invoke the lambda, less confusing
+
+// idiom: call-once lambda (daisy hollman, what you can learn from being too cute)
+struct X {
+  X() {
+    static auto _ = [] { ... } ();                // we want it to be called only once
+  }
+};
+X x1, x2, x3;                                     // called only once
+
+// generic lambdas
+[](auto i) { ... i ... };                         // template<T> call_operator(T i) const {...}
+
+// perfect forwarding, auto ref ref
+[&v](auto&& x) {                                  // template<T> call_oper(T&& x) const { __v.push_back(...); }
+  v.push_back(forward<decltype(x)>(x));
+};
+
+// variadic templates
+[](auto&&.. args) {
+  (cout << ... << args);                          // fold expression
+} (123, "hello", 'a', 4.0);
+
+// idiom: variable template lambda (bjorn fahller)
+template<typename T>                              // not just the callable, the lambda closure type also is a template
+constexpr auto x = [](auto y) {
+  return (T)y;                                    // cast to type T
+}
+
+// example:
+template<typename T> constexpr auto duration_cast = [](auto d) {
+  return std::chrono::duration_cast<T>(d);
+}
+using ns = std::chrono::nanoseconds;
+using ms = std::chrono::milliseconds;
+using us = std::chrono::microseconds;
+struct Time {
+  variant<ms, ns> time;
+  auto convert(const auto& converter) {
+    return visit(converter, time);
+  }
+};
+void foobar() {
+  Time t(ns(3000));
+  auto in_usecs = t.convert(duration_cast<us>).count();
+}
+
+// init capture
+unique_ptr<A> ptr;
+auto lambda_f_instance = [ptr = std::move(ptr)] { ... ptr.get() ... }
+// equiv to
+struct LambdaClosureType {
+  LambdaClosureType(unique_ptr<A> p) : __ptr(move(p)) {}
+  unique_ptr<A> __ptr;
+  ... callable ...
+} lambda_f_instance {move(ptr)};
+
+// idiom: init capture initialization (bartlomiej filipek - C++ lambda story book)
+const string prefix="foo"; // looking for "foobar" in a vector
+auto iter = find_if(vs.begin(), vs.end(), [str=prefix+"bar"](const string& s) { return s == str}; );
+// versus less efficient version, calculates prefix+"bar" for every item in vs
+auto iter = find_if(vs.begin(), vs.end(), [&prefix](const string& s) { return s == prefix+"bar"}; );
+
+// lambdas can be constexpr or consteval, that can execute at compile time
+auto f = []() constexpr { return sizeof(void*); };    // compile time
+array<int, f()> arr = {};
+auto g = [](int i) consteval { return i*i; };         // compile time only
+array<int, g(5)> arr = {};                            // ok
+g(x); // error, not a constant
+
+// idiom: lambda overload set (uses CTAD)
+// idea -- lambda's are conceptually classes, and you should be able to inherit from them
+template<typename... Ts>                      // variadic args will be lambdas
+struct overload : Ts... {                     // we inherit from those lambdas
+  using Ts::operator()...;                    // we pull in the callable operator from all of them
+};
+
+overload f = {                                // note: CTAD use, haven't given template arg types
+  [](int i) { cout << "Wonderful, called with int"; },
+  [](float f) { cout << "Call with float detected"; }
+};
+f(10);  // Wonderful, called with int
+f(2.5); // Call with float detected
+variant<int, float> v = 3.9;
+visit(f, v);        // Call with float detected
+
+// structured binding captured in lambdas
+auto [x, y] = Point();
+auto f = [=] {
+  cout << x << ", " << y << endl;
+};
+// variadic args captured in lambdas
+auto foo(auto... args) { cout << sizeof...(args) << endl; }
+template<typename... Args>
+auto delay_invoke_foo(Args... args) {
+  return [args...]() -> decltype(auto) {
+    return foo(args...);
+  }
+}
+
+erase_if(v.begin(), v.end(), [](auto i) { ... i ... });           // callable is a template, but no name for the type
+erase_if(v.begin(). v.end(), []<typename T>(T i) { ... i ...});   // can give the template type a name, can specify constraints etc. (C++20)
+
+// lambda as a data member of a class
+class W {
+  auto mem_f_ = []{};    // error: data member with auto not allowed
+  decltype([]{}) mem_f_; // ok in C++20
+};
+// benefit: now can define template parameters that are lambdas
+// note: earlier we could not do this in template definition at compile time,
+// had to pass it as constructor param, which is for later (run time)
+typename<typename T>
+using UniquePtrTypeWithMyOwnDeleter = unique_ptr<T, decltype<[](T* t) { myDeleter(t); }>>;
+UniquePtrTypeWithMyOwnDeleter<A> ptr;
+// comparison function is a lambda given in template definition at compile time
+using WidgetSet = std::set< Widget, decltype([](Widget& a, Widget& b) { return a.x < b.x; })>;
+WidgetSet ws;
+
+// compiler generates a different type for every lambda it sees
+auto f1 = []{};
+auto f2 = []{};     // f1 and f2 have different types, even though lambdas look identical
+auto f3 = f1;       // f1, f3 have same type
+decltype(f1) f4;    // f1 and f4 have same type
+using t = decltype([]{});
+t f5, f6;           // f5 and f6 have same type
+template<auto = []{}> struct X{};
+X x1, x2;           // x1 and x2 have different type, each instantiation is different type
+static_assert(typeid(decltype(x1)) == typeid(decltype(x2)), "types are different");
+// idiom: unique type generator (kris jusiak)
+
+// idiom (C++23): recursive lambdas
+// factorial using lambdas,
+// idea 1:
+// auto fact = [](int i) { if (i==0); return 1; return i*fact(i-1); };
+// cannot refer to fact in its own initializer
+
+// idea 2: use capture by reference, after making lambda a std::function
+// ok, but there is an overhead here, function uses type erasure etc.
+function<int(int)> fact = [&](int i) { if (i==0) return 1; return i*fact(i-1); };
+
+// idea 3: c++23, "deduce this"
+auto fact = [](this aut&& self, int i) { if (i==0); return 1; return i*self(i-1); };
+
+// idiom (C++23): recursive lambda overload set -- ben deane -- deducing this patterns
+// binary tree implemented as a variant, use overload defined above
+struct Leaf {};
+struct Node;
+using Tree = std::variant<Leaf, Node*>;
+struct Node { Tree left, right; }
+
+int countLeaves(const Tree& tree) {
+  return visit(
+    overload {
+      [] (const Leaf&) { return 1; },
+      [] (this const auto& self, const Node* node) -> int {
+        // self is the compiler generated type for "overload" template instantiated
+        return visit(self, node->left) + visit(self, node->right);
+      }
+    },
+    tree
+  );
+}
+```
+
+### Class Template Argument Deduction (CTAD)
+```cpp
+vector vi = { 1, 2, 3, 4}; // vector<int> deduced from the initializer list with integers
+```
+
 ### std bind
 ```cpp
 #include <functional>
@@ -1189,6 +1433,13 @@ double half = inverse(2.0);
 auto twice = bind(divide, _1, 0.5);              // 2nd arg is bound
 double ten = twice(5.0);
 
+```
+
+### sort
+
+```cpp
+sort(v.begin(), v.end(), [](const A& a, const A& b) { return a.m1 < b.m1; }); // lambda expr
+//  lambda => "closure type" with public inline call operator
 ```
 
 ## Templates
