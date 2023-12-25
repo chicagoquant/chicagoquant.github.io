@@ -3,8 +3,9 @@
 - [Competitive programming](#competitive-programming)
   - [Header for C++ contests](#header-for-c-contests)
   - [Canonical Class](#canonical-class)
-    - [Overloads of class function -- ref, const-ref, rvalue, const-rvalue](#overloads-of-class-function----ref-const-ref-rvalue-const-rvalue)
+    - [Overloads of class function -- ref, const-ref, rvalue, const-rvalue qualifier](#overloads-of-class-function----ref-const-ref-rvalue-const-rvalue-qualifier)
     - [Copy-Move-Swap Idioms](#copy-move-swap-idioms)
+    - [Lazy Initialization](#lazy-initialization)
   - [Dump predefined macros](#dump-predefined-macros)
   - [Watch memory allocation](#watch-memory-allocation)
   - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
@@ -13,6 +14,7 @@
   - [Copy into a vector](#copy-into-a-vector)
     - [Copying](#copying)
   - [CPP Features](#cpp-features)
+    - [Function pointers](#function-pointers)
     - [Structured binding](#structured-binding)
     - [Swap](#swap)
   - [Crazy STL](#crazy-stl)
@@ -36,6 +38,7 @@
     - [Class Template Argument Deduction (CTAD)](#class-template-argument-deduction-ctad)
     - [std bind](#std-bind)
     - [sort](#sort)
+    - [sum of vector](#sum-of-vector)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -193,21 +196,29 @@ public:
   // replaces above 2 assignment operators
   A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
 
-  void swap(A& b) noexcept {
-    cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
+  // replaces both A::swap(b), std::swap(a, b)
+  friend void swap(A& a, A& b) noexcept {
+    cout << "friend swap(A& a=" << &a << ", A& b=" << &b << ")" << endl;
     // member1.swap(b.member1); or std::swap(a.member, b.member);
     // swap(pointerMember, b.pointerMember);
     // swap(basicTypeMember, b.basicTypeMember);
   }
+
+  // void swap(A& b) noexcept {
+  //   cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
+  //   // member1.swap(b.member1); or std::swap(a.member, b.member);
+  //   // swap(pointerMember, b.pointerMember);
+  //   // swap(basicTypeMember, b.basicTypeMember);
+  // }
 };
 
-namespace std {
-  // non-member swap, if we don't define, then default implementation will do tmp-move(a)-move(b)-move(tmp)
-  template<>                           // full-specialization required if defininig in std namespace
-  void swap(A& a, A& b) noexcept {
-    a.swap(b);
-  }
-}
+// namespace std {
+//   // non-member swap, if we don't define, then default implementation will do tmp-move(a)-move(b)-move(tmp)
+//   template<>                           // full-specialization required if defininig in std namespace
+//   void swap(A& a, A& b) noexcept {
+//     a.swap(b);
+//   }
+// }
 ```
 
 Initializations: aggregate, constant, copy, default, direct, list, reference, value, zero
@@ -224,7 +235,7 @@ T t = T(); T{};  // value (empty-initializer)
 static T t; T t(); // zero
 ```
 
-### Overloads of class function -- ref, const-ref, rvalue, const-rvalue
+### Overloads of class function -- ref, const-ref, rvalue, const-rvalue qualifier
 ```
 template<typename T>
 class X {
@@ -297,6 +308,177 @@ public:
     swap(a.v, b.v);
   }
 };
+```
+
+### Lazy Initialization
+
+```cpp
+// option 1: Using std optional -- object on stack
+class Lazy
+{
+  optional<BigObject> big{};
+public:
+  void eval_lazy() {
+    if (!big) {                             // no thread-safety
+      big.emplace(...);                     // lazily construct big
+    }
+    big->some_method(...);
+  }
+};
+
+// option 2: Using std smart pointer -- object created on heap
+class Lazy
+{
+  unique_ptr<BigObject> big{};
+public:
+  void eval_lazy() {
+    if (!big) {                             // no thread-safety
+      big = make_unique<BigObject>(...);    // lazily construct big
+    }
+    big->some_method(...);
+  }
+};
+
+// source: https://www.cppstories.com/2019/10/lazyinit/
+
+// option 3: Using raw pointer -- forced to implement dtor, and rule-of-seven or rule-of-five
+// class Lazy
+// {
+//   BigObject* big {nullptr};
+// public:
+//   ~Lazy() { delete big;  }
+//   // have to implment all ctors
+//   void eval_lazy() {
+//     if (!big) {
+//       big = new BigObject {...};           // lazily construct big
+//     }
+//     big->some_method(...);
+//   }
+// };
+
+class ThreadSafeLazy : public Lazy
+{
+  mutable mutex mut;    // not copyable, not movable, need custom copy ctors, assignment etc
+public:
+
+  ThreadSafeLazy(const ThreadSafeLazy& other) noexcept { /* do not copy mut, copy the rest */ big = other.big; }
+  ThreadSafeLazy& operator=(const ThreadSafeLazy& other) noexcept { /* do not copy mut, copy the rest */ big = other.big; return *this; }
+  ThreadSafeLazy(ThreadSafeLazy&& other) noexcept { /* do not copy mut, copy the rest */ big = move(other.big); }
+  ThreadSafeLazy& operator=(ThreadSafeLazy&& other) noexcept { /* do not copy mut, copy the rest */ big = move(other.big); return *this; }
+  void some_method(...) const {
+    MakeSureReady();
+    big.something(...);
+  }
+
+private:
+  // should keep big and mut mutable to modify from const fn
+  void MakeSureReady() const {
+    scoped_lock loc(mut);
+    if (!big) {
+      big.emplace(...);
+    }
+  }
+};
+
+
+class ThreadSafeLazyCallOnce : public Lazy
+{
+  mutable once_flag flag;// not copyable, not movable, need custom copy ctors, assignment etc
+public:
+
+  ThreadSafeLazy(const ThreadSafeLazy& other) noexcept { /* do not copy mut, copy the rest */ big = other.big; }
+  ThreadSafeLazy& operator=(const ThreadSafeLazy& other) noexcept { /* do not copy mut, copy the rest */ big = other.big; return *this; }
+  ThreadSafeLazy(ThreadSafeLazy&& other) noexcept { /* do not copy mut, copy the rest */ big = move(other.big); }
+  ThreadSafeLazy& operator=(ThreadSafeLazy&& other) noexcept { /* do not copy mut, copy the rest */ big = move(other.big); return *this; }
+  void some_method(...) const {
+    MakeSureReady();
+    big.something(...);
+  }
+
+private:
+  // should keep big and flag to modify from const fn
+  void MakeSureReady() const {
+    if (!big) {
+      call_once(flag, [&]() {
+        if (!big) { big.emplace(...); }
+      });
+    }
+  }
+};
+// source: https://www.cppstories.com/2019/11/lazyinit-multithreading/
+```
+
+How to deal with copy/move of mutex member of a class?
+```cpp
+class A
+{
+  #if CPP11
+    using MutexType = std::mutex;
+    using ReadLock =  std::unique_lock<MutexType>;
+    using WriteLock = std::unique_lock<MutexType>;
+  #endif
+  #if CPP14
+    using MutexType = std::shared_timed_mutex;          // or recursive_mutex for (this == &rhs)
+    using ReadLock =  std::shared_lock<MutexType>;
+    using WriteLock = std::unique_lock<MutexType>;
+  #endif
+  mutable MutexType mut_;
+
+  std::string field1_;
+  std::string field2_;
+
+private:
+  // helper constructor
+  A(const A& a, ReadLock rhs_lk) // lock by value
+    : field1_(a.field1_), field2_(a.field2_)
+  {}
+
+public:
+  A(const A& a) : A(a, ReadLock(a.mut_))
+  {}
+
+  A(A&& a) {
+    // do not need to lock this->mut_ in this ctor,
+    // only 1 thread could construct this object
+    WriteLock rhs_lk(a.mut_);
+    field1_ = std::move(a.field1_);
+    field2_ = std::move(a.field2_);
+  }
+
+  A& operator=(const A& a) {
+    if (&x != &y) {
+      WriteLock lhs_lk(x.mut_, defer_lock);
+      ReadLock rhs_lk(y.mut_, defer_lock);
+      lock(lhs_lk, rhs_lk);
+      x.field1_ = y.field1_;
+      x.field2_ = y.field2_;
+    }
+  }
+
+  A& operator=(A&& a) {
+    if (&x != &y) {
+      WriteLock lhs_lk(x.mut_, defer_lock);
+      WriteLock rhs_lk(y.mut_, defer_lock);
+      lock(lhs_lk, rhs_lk);
+      x.field1_ = move(y.field1_);
+      x.field2_ = move(y.field2_);
+    }
+  }
+
+  friend void swap(A& x, A& y) noexcept
+  {
+    if (&x != &y) {
+      WriteLock lhs_lk(x.mut_, defer_lock);
+      WriteLock rhs_lk(y.mut_, defer_lock);
+      lock(lhs_lk, rhs_lk);
+      using std::swap;
+      swap(x.field1_, y.field1_);
+      swap(x.field2_, y.field2_);
+    }
+  }
+};
+
+// source: https://stackoverflow.com/questions/29986208/how-should-i-deal-with-mutexes-in-movable-types-in-c/29988626#29988626
 ```
 
 ## Dump predefined macros
@@ -422,6 +604,19 @@ C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vect
 ```
 
 ## CPP Features
+
+### Function pointers
+```cpp
+R (*fp)(Arg1, Arg2);
+fp = &sum;
+v = fp(a, b);
+
+R (A::*memfp)(Arg1, Arg2);
+memfp = &A::foo;
+A a;
+v = (a.*memfp)(x, y);
+
+```
 
 ### Structured binding
 
@@ -1440,6 +1635,13 @@ double ten = twice(5.0);
 ```cpp
 sort(v.begin(), v.end(), [](const A& a, const A& b) { return a.m1 < b.m1; }); // lambda expr
 //  lambda => "closure type" with public inline call operator
+```
+
+### sum of vector
+
+```cpp
+#include <algorithm>
+int sum = accumulate(v.begin(), v.end(), 0);
 ```
 
 ## Templates
