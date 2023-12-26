@@ -39,6 +39,7 @@
     - [std bind](#std-bind)
     - [sort](#sort)
     - [sum of vector](#sum-of-vector)
+    - [std ranges](#std-ranges)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -150,6 +151,7 @@ Lots of headers
 #include <iostream>
 #include <variant>
 #include <vector>
+#include <map>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -159,12 +161,22 @@ Lots of headers
 #include <cstdint>
 #include <cstdlib>
 #include <numeric>
+#include <mutex>
+#include <thread>
+#include <optional>
 #include <boost/core/demangle.hpp>
+
+#include <ranges>
+
+namespace rs = std::ranges;
+namespace rv = std::ranges::view;   // same as std::views
 
 using namespace std;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-variable"
+
+auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 {
@@ -1635,6 +1647,8 @@ double ten = twice(5.0);
 ```cpp
 sort(v.begin(), v.end(), [](const A& a, const A& b) { return a.m1 < b.m1; }); // lambda expr
 //  lambda => "closure type" with public inline call operator
+
+sort(v.rbegin(), v.rend()); // reverse order sort
 ```
 
 ### sum of vector
@@ -1642,6 +1656,62 @@ sort(v.begin(), v.end(), [](const A& a, const A& b) { return a.m1 < b.m1; }); //
 ```cpp
 #include <algorithm>
 int sum = accumulate(v.begin(), v.end(), 0);
+
+#include <numeric>
+int sum = reduce(v.begin(), v.end(), 0);
+```
+
+### std ranges
+```cpp
+#include <ranges>
+#include <algorithm>
+
+namespace rs = std::ranges;
+namespace rv = std::ranges::views;   // same as std::views
+
+using namespace std;
+
+auto print_elem = [](auto const e) {std::cout << e << '\n'; };
+auto even = [](auto const i) { return i%2 == 0; };
+auto  odd = [](auto const i) { return i%2 != 0; };
+auto square = [](auto const i) { return i*i; };
+
+// print vector elements
+rs::for_each(crbegin(vi), crend(vi), print_elem);                   | for_each(cbegin(vi), cend(vi), print_elem);
+rs::for_each(as_const(vi), print_elem);                             | for (const auto i : vi) { print_elem(i); }
+
+// print vector elements in reverse
+rs::for_each(rv::reverse(vi), print_elem);                          | for_each(crbegin(vi), crend(vi), print_elem);
+rs::for_each(vi|rv::reverse, print_elem);                           |
+
+// print only even items
+rs::for_each(vi|rv::filter(even), print_elem);                      | for_each(cbegin(vi), cend(vi), [](auto i) { if (even(i)) print_elem(i); });
+
+
+
+// skip 2 items, print only even from next 5 items
+rs::for_each(vi|rv::drop(2)|rv::take(5)|rv::filter(even), print_elem);
+
+// print all from 101 to 200
+rs::foreach(rs::iota_view(101, 201), print_elem)                    | for (int n = 101; n < 201; ++n) { print_elem(n); }
+
+// sort vector
+rs::sort(vi);       // default: rs::less(), increasing order
+rs::sort(vi, rs::greater());
+rs::sort(rv::reverse(vi));
+
+// composition
+auto const vi = rs::iota_view { 1,  21 };   // view factory
+for (int i : vi | rv::filter(even) | rv::transform(square)) {...}
+
+// pipe ==> composing views
+vi | rv::filter(even) | rv::transform(square);
+// same as
+rv::transform(
+  rv::filter(
+    vi
+  )
+);
 ```
 
 ## Templates
@@ -1787,6 +1857,9 @@ unique_ptr<T, void(*)(void*)> raii_ptr( static_cast<T*>(::malloc(size)), ::free 
 const char* separator;
 vector<int> src;
 copy(src.begin(), src.end(), ostream_iterator<int>(cout, separator));
+
+auto print_elem = [](const auto& i) { cout << i << ", "; };
+for_each(cbegin(src), cend(src), print_elem);
 ```
 
 ## Thread
