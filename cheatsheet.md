@@ -42,6 +42,7 @@
     - [sort](#sort)
     - [sum of vector](#sum-of-vector)
     - [std ranges](#std-ranges)
+    - [Utilities - move forward](#utilities---move-forward)
   - [Templates](#templates)
     - [Variadic Template Function](#variadic-template-function)
     - [Variadic Template Class](#variadic-template-class)
@@ -1854,6 +1855,21 @@ rv::transform(
   )
 );
 ```
+
+### Utilities - move forward
+```cpp
+std::move(v) = static_cast<remove_reference<T>::type&&>(v)
+T v;
+std::move(v) = static_cast<T&&>(v)
+
+std::forward<T>(arg) = static_cast<T&&>(arg)
+
+remove_reference<T>::type = T
+remove_reference<T&>::type = T
+remove_reference<T&&>::type = T
+```
+
+
 
 ## Templates
 
