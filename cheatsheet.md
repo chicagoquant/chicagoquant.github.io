@@ -26,6 +26,7 @@
       - [Usage - variant (type-safe union)](#usage---variant-type-safe-union)
       - [Implementation idea - variant](#implementation-idea---variant)
       - [Usage - optional](#usage---optional)
+      - [Implementation idea - optional](#implementation-idea---optional)
     - [Tag Dispatch](#tag-dispatch)
     - [Type Erasure](#type-erasure)
     - [CRTP](#crtp)
@@ -1027,8 +1028,63 @@ union VariadicUnion<T1>                       // base case
 ```
 
 #### Usage - optional
-```cpp
 
+contains storage for the object and manages its lifetime
+
+```cpp
+#include <optional>
+
+optional<int> o;
+optional<int> o(100);
+o.has_value() == bool(o)
+o.emplace(100);
+nullopt == optional<int>{}
+int i = *o;
+int i = o.value();
+int i = o.value_or(10);
+*o = 20;
+o.reset();
+
+optional<string> o;
+o->size();
+auto taken = *move(o);
+
+/* has value */                             | /* no value */
+optional<A> o;                              |
+o = optional<A>{A{}}                        | o = optional<A>{}
+o = A{}                                     | o = {}
+o = make_optional<A>()                      | o = nullopt
+o.emplace()                                 | o.reset()
+```
+
+#### Implementation idea - optional
+```cpp
+struct Optional<T>  // messsy version
+{
+  bool got_value;
+  aligned_storage_t<sizeof(T), alignof(T)> buf;  // space for T contained_value
+  optional(const T& t) : got_value(true) { ::new ((void*)&buf) T(t); } // in-place new
+  ~optional() { if (got_value) { reinterpret_cast<T&>(buf).~T(); } }   // destructor
+};
+
+struct Optional<T>  // better, with anonymous union
+{
+  union {
+    char dummy;
+    T val;
+  };
+  bool engaged;
+  optional() : dummy(0), engaged(false) {}
+  optional(const T& t) : val(t), engaged(true) {}
+  ~optional() {
+    if constexpr (!is_trivially_destructible<T>{}) {
+      if (engaged) val.~T();
+    }
+  }
+};
+
+// see: https://www.club.cc.cmu.edu/~ajo/disseminate/2017-02-15-Optional-From-Scratch.pdf
+// https://www.club.cc.cmu.edu/~ajo/
 ```
 
 ### Tag Dispatch
