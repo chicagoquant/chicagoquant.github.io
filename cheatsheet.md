@@ -3,7 +3,7 @@
 - [Competitive programming](#competitive-programming)
   - [Header for C++ contests](#header-for-c-contests)
   - [Canonical Class](#canonical-class)
-    - [Overloads of class function -- ref, const-ref, rvalue, const-rvalue qualifier](#overloads-of-class-function----ref-const-ref-rvalue-const-rvalue-qualifier)
+    - [Overloads with ref-qualifier](#overloads-with-ref-qualifier)
     - [Copy-Move-Swap Idioms](#copy-move-swap-idioms)
     - [Lazy Initialization](#lazy-initialization)
   - [Dump predefined macros](#dump-predefined-macros)
@@ -25,6 +25,7 @@
       - [Implementation idea - any](#implementation-idea---any)
       - [Usage - variant (type-safe union)](#usage---variant-type-safe-union)
       - [Implementation idea - variant](#implementation-idea---variant)
+      - [Usage - optional](#usage---optional)
     - [Tag Dispatch](#tag-dispatch)
     - [Type Erasure](#type-erasure)
     - [CRTP](#crtp)
@@ -247,8 +248,10 @@ T t = T(); T{};  // value (empty-initializer)
 static T t; T t(); // zero
 ```
 
-### Overloads of class function -- ref, const-ref, rvalue, const-rvalue qualifier
-```
+### Overloads with ref-qualifier
+
+Overloads of class function -- ref, const-ref, rvalue, const-rvalue
+```cpp
 template<typename T>
 class X {
   constexpr T&        get_value() &       { return get_value_impl(*this); }
@@ -1023,6 +1026,11 @@ union VariadicUnion<T1>                       // base case
 // ---------------------------------------------------------------------------
 ```
 
+#### Usage - optional
+```cpp
+
+```
+
 ### Tag Dispatch
 
 Use a type to overload an implementation
@@ -1676,6 +1684,30 @@ auto even = [](auto const i) { return i%2 == 0; };
 auto  odd = [](auto const i) { return i%2 != 0; };
 auto square = [](auto const i) { return i*i; };
 
+std::string to_roman(int value)
+{
+   std::vector<std::pair<int, char const*>> roman
+   {
+      { 1000, "M" },{ 900, "CM" },
+      { 500, "D" },{ 400, "CD" },
+      { 100, "C" },{ 90, "XC" },
+      { 50, "L" },{ 40, "XL" },
+      { 10, "X" },{ 9, "IX" },
+      { 5, "V" },{ 4, "IV" },
+      { 1, "I" }
+   };
+   std::string result;
+   for (auto const & [d, r]: roman)
+   {
+      while (value >= d)
+      {
+         result += r;
+         value -= d;
+      }
+   }
+   return result;
+}
+
 // print vector elements
 rs::for_each(crbegin(vi), crend(vi), print_elem);                   | for_each(cbegin(vi), cend(vi), print_elem);
 rs::for_each(as_const(vi), print_elem);                             | for (const auto i : vi) { print_elem(i); }
@@ -1688,12 +1720,65 @@ rs::for_each(vi|rv::reverse, print_elem);                           |
 rs::for_each(vi|rv::filter(even), print_elem);                      | for_each(cbegin(vi), cend(vi), [](auto i) { if (even(i)) print_elem(i); });
 
 
-
 // skip 2 items, print only even from next 5 items
 rs::for_each(vi|rv::drop(2)|rv::take(5)|rv::filter(even), print_elem);
 
 // print all from 101 to 200
 rs::foreach(rs::iota_view(101, 201), print_elem)                    | for (int n = 101; n < 201; ++n) { print_elem(n); }
+
+// print all roman numerals from 101 - 200
+rs::for_each(rv::iota(101, 201), print_elem, /* proj= */ to_roman); | for (int i = 101; i < 201; ++i) { print_elem(to_roman(i)); }
+
+// print roman numerals of last 3 numbers divisible by 7 in the range 101-200
+rs::for_each(                                                       | for (int i = 200, count = 0; i > 100 && count < 3; --i) {
+    rv::iota(101, 201) |                                            |   if (i % 7 == 0) {
+    rv::reverse |                                                   |     print_elem(to_roman(i)); ++count;
+    rv::filter([](auto i) { return i%7==0; }) |                     |   }
+    rv::take(3) |                                                   | }
+    rv::transform(to_roman)                                         |
+  ,                                                                 |
+  print_elem                                                        |
+);                                                                  |
+
+// get a vector of above roman numerals
+template <std::ranges::range R>                                     |
+auto to_vector(R&& r) {                                             |
+    auto r_common = r | std::views::common;                         |
+    return std::vector(r_common.begin(), r_common.end());           |
+}                                                                   |
+                                                                    |
+auto vr =                                                           | vector<string> vs;
+    rv::iota(101, 201) |                                            | for (int i = 200, count = 0; i > 100 && count < 3; --i) {
+    rv::reverse |                                                   |   if (i % 7 == 0) {
+    rv::filter([](auto i) { return i%7==0; }) |                     |     vs.push_back(to_roman(i));
+    rv::take(3) |                                                   |     ++count;
+    rv::transform(to_roman);                                        |   }
+vector<string> vs = to_vector(vr);                                  | }
+// in C++23, we can use | rs::to<vector<string>>()
+
+// get unique items in reverse sorted order
+vector<int> vi;                                                     | sort(vi.begin(), vi.end());
+vi = move(vi) | rs::sort | rs::unique | rs::reverse;                | vi.erase(unique(vi.begin(), vi.end()), vi.end());
+                                                                    | reverse(vi.begin(), vi.end());
+
+// remove smallest 2 and largest 2 items, the rest in sorted order
+vector<int> vi;                                                     | vector<int> vi, vi2; vi2 = vi; sort(v2.begin(), v2.end());
+auto vi2 = vi | rs::copy | rs::sort | rs::slice(2, rs::end-2);      | auto first = vi2.begin() + 2, last = vi2.end()-2;
+                                                                    | vi2.erase(last, vi2.end());  // not using std::erase()+std::remove(), i.e. erase-remove idiom
+                                                                    | vi2.erase(vi2.begin(), first);
+
+// join strings
+vector<string> vs { .... };                                         | string joined;
+string joined = vs | rs::move | rs::join;                           | for (const auto& w : vs)
+string joined = vs | rs::move | rs::join_with(' ');                 | { joined += w; }
+
+// count words separated by space
+auto count = rs::distance( rv::c_str(str) | rv::split(' ') );       | istringstream iss(str);
+                                                                    | vector<string> words (istream_iterator<string>(iss), istream_iterator<string>());
+                                                                    | string token;
+                                                                    | int count = 0;
+                                                                    | istringstream iss(str);
+                                                                    | while (getline(iss, token, ' ') { ++count; }
 
 // sort vector
 rs::sort(vi);       // default: rs::less(), increasing order
