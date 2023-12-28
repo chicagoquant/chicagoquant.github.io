@@ -14,6 +14,8 @@
   - [Copy into a vector](#copy-into-a-vector)
     - [Copying](#copying)
   - [CPP Features](#cpp-features)
+    - [CPP Data Types](#cpp-data-types)
+    - [CPP Number limits](#cpp-number-limits)
     - [Function pointers](#function-pointers)
     - [Structured binding](#structured-binding)
     - [Swap](#swap)
@@ -185,7 +187,7 @@ Lots of headers
 #include <ranges>
 
 namespace rs = std::ranges;
-namespace rv = std::ranges::view;   // same as std::views
+namespace rv = std::ranges::views;   // same as std::views
 
 using namespace std;
 
@@ -634,6 +636,46 @@ C(const vector<int>& v) : vi(v) {} | C(vector<int>&& v) : vi(move(v)) {}| C(vect
 ```
 
 ## CPP Features
+
+### CPP Data Types
+```cpp
+#include <cstdint>
+
+bool;
+char; byte; unsigned char; int8_t; uint8_t;
+short; short int; unsigned short; unsigned short int; int16_t; uint16_t;
+int; unsigned int; int32_t; uint32_t;
+long; long int; unsigned long; unsigned long int;  // 32-bit on LLP64, 64-bit on LP64
+long long; long long int; unsigned long long; unsigned long long int; int64_t; uint64_t;
+
+float;        // 4 bytes
+double;       // 8 bytes
+long double;  // 16 bytes or 8 bytes
+
+void;
+
+enum;     // unscoped enum, can be converted to int implicitly
+enum Color { red, green, blue }; Color r = red;
+enum Color : byte { red, green, blue };
+
+enum class; enum struct;      // scoped enum, need static_cast to convert to int
+enum class Color { red, green, blue }; Color r = Color::red;
+union;
+class; struct;
+
+```
+
+### CPP Number limits
+
+```cpp
+#include <limits>         | #include <limits.h>
+
+int a = INT_MIN, b = INT_MAX;                 // c/c++ limits
+
+int a = std::numeric_limits<int>::min(),      // c++ limits
+    b = std::numeric_limits<int>::max();
+
+```
 
 ### Function pointers
 ```cpp
