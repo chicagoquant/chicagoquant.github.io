@@ -143,6 +143,12 @@
     - [Rust build commands](#rust-build-commands)
     - [Rust Basics](#rust-basics)
     - [More rust things](#more-rust-things)
+- [Systems Programming](#systems-programming)
+  - [Memory](#memory)
+    - [Virtual Memory](#virtual-memory)
+    - [Shared memory Anonymous](#shared-memory-anonymous)
+    - [Shm Named File](#shm-named-file)
+    - [Shared memory segment IPC](#shared-memory-segment-ipc)
 
 ---
 
@@ -4038,4 +4044,101 @@ fn main() {
     sign_in_count: 1,
   };
 }
+```
+
+# Systems Programming
+
+## Memory
+
+### Virtual Memory
+- Page size: 4KB = 4096 bytes
+- Logical Address = (Logical Page Number, Offset)
+- Physical Address = (Physical Page Number, Offset)
+- Page Table = Logical Page Number -> Physical Page Number
+- On Demand Paging
+- Major Page Fault -- Page does not exist yet, needs to be created from disk
+- Pages are shared between processes
+- Copy on write (On Demand Memory/Paging)
+- Special pages - swap page, zero page, read data behavior, write data behavior, anonymous vs file backed pages
+
+```text
+cat /proc/meminfo
+Mem
+
+ls /sys/devices/system/ /proc/sys/vm/
+
+numactl --hardware
+free
+top
+dmesg
+
+ls /proc/pid/status,*maps
+ps
+
+ulimit -a  # how much memory can a process use
+```
+
+### Shared memory Anonymous
+
+Can be shared with a child process, that
+
+```cpp
+size_t buffer_size = 32MB;
+int flags = MAP_ANONYMOUS | MAP_SHARED | MAP_POPULATE;
+flags |= MAP_HUGETLB | (30<<MAP_HUGE_SHIFT);                // 1gb hugepage
+void* buf = mmap(
+  nullptr,
+  buffer_size,
+  PROT_WRITE|PROT_READ,
+  flags,
+  -1,
+  0
+);
+assert(buf != MAP_FAILED);
+madvise(buf, buffer_size, MADV_WILLNEED|MADV_UNMERGABLE|MADV_HUGEPAGE);
+memset(buf, 0, buffer_size);
+int err = mlock(buf, buffer_size);
+assert(err >= 0);
+...
+err = munmap(buf, buffer_size);
+assert(err >= 0);
+
+```
+
+### Shm Named File
+
+Can be shared with anybody who has access to the named shared mem file. Use `shm_open()` to open a shared memory object
+
+```cpp
+const string name = "/dev/shm/blah.shm";
+int fd = ::shm_open(name.c_str(), O_EXCL | O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+assert(fd >= 0);
+ftruncate(fd, buffer_size);
+void* buf = mmap(nullptr, buffer_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULAT | MAP_LOCKED, fd, 0);
+assert(buf != MAP_FAILED);
+...
+munmap(buf, buffer_size);
+shm_unlink(name.c_str());
+```
+
+### Shared memory segment IPC
+```cpp
+int buffer_size = 20MB;
+int segment_id = shmget(IPC_PRIVATE, buffer_size, IPC_CREAT|IPC_EXCL|S_IRUSR|S_IWUSR); // allocate a shm segment
+void* buf = shmat(segment_id, 0, 0); // attach
+
+shmid_ds info;
+shmtctl(segment_id, IPC_STAT, info); // check segment size
+size_t segment_size = info.shm_segsz;
+
+sprintf(buf, "hello message");
+
+...
+shmdt(buf); // detach, do not use buf after this
+void* some_memory_address = 0x5000000;             // different address
+buf = shmat(segment_id, some_memory_address, 0);   // reattach at a different address
+
+...
+shmdt(buf); // detach
+shmctl(segment_id, IPC_RMID, 0); // deallocate shm segment
 ```
