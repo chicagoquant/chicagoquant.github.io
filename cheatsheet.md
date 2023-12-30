@@ -157,6 +157,7 @@
       - [step 3 - add filters](#step-3---add-filters)
       - [step 4 - add packet buffers](#step-4---add-packet-buffers)
       - [step 5 - handle packets](#step-5---handle-packets)
+      - [step 6 - free resources](#step-6---free-resources)
   - [LMAX Disruptor](#lmax-disruptor)
   - [Aeron Messaging](#aeron-messaging)
 
@@ -4256,14 +4257,29 @@ while (true) {
 }
 ```
 
-- TCP Direct: https://docs.xilinx.com/v/u/en-US/SF-116303-CD-TCPDirect_User_Guide
-- EF_VI: https://docs.xilinx.com/v/u/en-US/SF-114063-CD-
-- Documentation: https://www.xilinx.com/support/download/nic-software-and-drivers.html#open
+#### step 6 - free resources
+```cpp
+/* Release and free a memory region */
+int ef_memreg_free(ef_memreg* mr, ef_driver_handle mr_dh);
+
+/* Release and free a virtual interface */
+int ef_vi_free(ef_vi* vi, ef_driver_handle vi_dh);
+
+/* Release and free a protection domain */
+int ef_pd_free(ef_pd *pd, ef_driver_handle pd_dh);
+
+/* close a driver handle */
+int ef_driver_close(ef_driver_handle dh);
+```
+
+- TCP Direct: [https://docs.xilinx.com/v/u/en-US/SF-116303-CD-TCPDirect_User_Guide](https://docs.xilinx.com/v/u/en-US/SF-116303-CD-TCPDirect_User_Guide)
+- EF_VI: [https://docs.xilinx.com/v/u/en-US/SF-114063-CD-ef_vi_User_Guide](https://docs.xilinx.com/v/u/en-US/SF-114063-CD-ef_vi_User_Guide)
+- Documentation: [https://www.xilinx.com/support/download/nic-software-and-drivers.html#open](https://www.xilinx.com/support/download/nic-software-and-drivers.html#open)
 
 ## LMAX Disruptor
 
 ```cpp
-class RingBuffer;
+class RingBuffer<E>;
 
 ```
 
