@@ -149,6 +149,16 @@
     - [Shared memory Anonymous](#shared-memory-anonymous)
     - [Shm Named File](#shm-named-file)
     - [Shared memory segment IPC](#shared-memory-segment-ipc)
+  - [Solarflare](#solarflare)
+    - [Example code](#example-code)
+      - [step 1 - setup](#step-1---setup)
+      - [step 2 - create packet buffer](#step-2---create-packet-buffer)
+      - [step 2.1 - cache packet metadata](#step-21---cache-packet-metadata)
+      - [step 3 - add filters](#step-3---add-filters)
+      - [step 4 - add packet buffers](#step-4---add-packet-buffers)
+      - [step 5 - handle packets](#step-5---handle-packets)
+  - [LMAX Disruptor](#lmax-disruptor)
+  - [Aeron Messaging](#aeron-messaging)
 
 ---
 
@@ -4142,3 +4152,160 @@ buf = shmat(segment_id, some_memory_address, 0);   // reattach at a different ad
 shmdt(buf); // detach
 shmctl(segment_id, IPC_RMID, 0); // deallocate shm segment
 ```
+
+## Solarflare
+
+### Example code
+
+#### step 1 - setup
+```cpp
+// setup - open the driver, allocate protection domain, allocate virtual interface from the PD
+ef_driver_handle driver_handle;
+ef_vi vi;
+ef_pd pd;
+
+int ifindex;
+
+ef_driver_open(&driver_handle);
+ef_pd_alloc(&pd, driver_handle, ifindex, EF_PD_DEFAULT);
+ef_vi_alloc_from_pd(&vi, driver_handle, &pd, driver_handle, -1, -1, -1, nullptr, -1, 0);
+```
+
+#### step 2 - create packet buffer
+```cpp
+// create packet buffer - allocate memory region and register it for packet buffers
+const int BUF_SIZE = 2048;
+int bytes = N_BUFS * BUF_SIZE;
+void* p;
+posix_memalign(&p, 4096, bytes);
+
+ef_memreg memreg;
+ef_memreg_alloc(&memreg, driver_handle, &pd, driver_handle, p, bytes);
+```
+
+#### step 2.1 - cache packet metadata
+```cpp
+#define MEMBER_OFFSET(c_type, mbr_name) ((uint32_t) (uintptr_t)(&((c_type*)0)->mbr_name))
+#define CACHE_ALIGN __attribute__((aligned(EF_VI_DMA_ALIGN)))
+
+struct pkt_buf {
+  struct pkt_buf* next; /* We’re not actually going to use this; but chaining multiple buffers together is a common and useful trick. */
+  ef_addr dma_buf_addr;
+  int id;
+  uint8_t dma_buf[1] CACHE_ALIGN; /* Not strictly required, but cache aligning the payload is a speed boost, so do it. */
+};
+/* We’re also going to want to keep track of all our buffers, so have an
+array of them. Not strictly needed, but convenient. */
+struct pkt_buf* pkt_bufs [N_BUFS];
+for( i = 0; i < N_BUFS; ++i ) {
+  pkt_buf* pb = (pkt_buf*) ((char*) p + i * 2048);
+  pb->id = i;
+  pb->dma_buf_addr = ef_memreg_dma_addr(&memreg, i * 2048);
+  pb->dma_buf_addr += MEMBER_OFFSET(struct pkt_buf, dma_buf);
+  pkt_bufs[i] = pb;
+}
+```
+
+#### step 3 - add filters
+```cpp
+// add filters
+struct sockaddr_in sa_local;
+ef_filter_spec filter_spec;
+ef_filter_spec_init(&filter_spec, EF_FILTER_FLAG_NONE);
+ef_filter_spec_set_ip4_local(&filter_spec, IPPROTO_UDP, sa_local.sin_addr.s_addr, sa_local.sin_port);
+ef_vi_filter_add(&vi, driver_handle, &filter_spec, nullptr);
+```
+
+#### step 4 - add packet buffers
+```cpp
+// push packet buffers to the rx descriptor ring
+unsigned int rx_posted = 0;
+int n;
+for (int i = 0; i < n; ++i)
+{
+  struct pkt_buf* pb = pkt_bufs[rx_posted % N_RX_BUFS];
+  ef_vi_receive_init(&vi, pb->dma_buf_addr, pb->id);
+  ++rx_posted;
+}
+ef_vi_receive_push(&vi);
+```
+
+#### step 5 - handle packets
+```cpp
+// handle incoming packets, poll the event queue
+ef_event evs[NUM_POLL_EVENTS];
+int n_ev, i;
+
+while (true) {
+  n_ev = ef_eventq_poll(&vi, evs, NUM_POLL_EVENTS);
+  if (n_ev > 0) {
+    for ( i = 0; i < n_ev; ++i)
+    {
+      switch (EF_EVENT_TYPE(evs[i]))
+      {
+      case EF_EVENT_TYPE_RX:
+        handle_rx_packet(EF_EVENT_RX_RQ_ID(evs[i]), EF_EVENT_RX_BYTES(evs[i]));
+        break;
+      case EF_EVENT_TYPE_RX_DISCARD:
+        fprintf(stderr, "ERROR: RX_DISCARD type=%d", EF_EVENT_RX_DISCARD_TYPE(evs[i]));
+        handle_rx_packet(EF_EVENT_RX_RQ_ID(evs[i]), EF_EVENT_RX_BYTES(evs[i]));
+        break;
+      }
+    }
+  }
+}
+```
+
+- TCP Direct: https://docs.xilinx.com/v/u/en-US/SF-116303-CD-TCPDirect_User_Guide
+- EF_VI: https://docs.xilinx.com/v/u/en-US/SF-114063-CD-
+- Documentation: https://www.xilinx.com/support/download/nic-software-and-drivers.html#open
+
+## LMAX Disruptor
+
+```cpp
+class RingBuffer;
+
+```
+
+```mermaid
+---
+title: LMAX
+---
+classDiagram
+direction LR
+
+class RingBuffer~E~
+
+class EntryFactory
+
+class Entry
+
+class ProducerBarrier {
+  + claim()
+  + commit()
+}
+
+class ConsumerBarrier
+
+class Consumer
+
+class WaitStrategy
+
+class BusySpinWaitStrategy
+class YieldingWaitStrategy
+class BlockingWaitStrategy
+
+WaitStrategy <|-- BusySpinWaitStrategy
+WaitStrategy <|-- YieldingWaitStrategy
+WaitStrategy <|-- BlockingWaitStrategy
+
+class ClaimStrategy
+
+class SingleThreadedClaimStrategy
+class MultiThreadedClaimStrategy
+
+ClaimStrategy <|-- SingleThreadedClaimStrategy
+ClaimStrategy <|-- MultiThreadedClaimStrategy
+```
+
+## Aeron Messaging
