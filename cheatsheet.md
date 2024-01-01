@@ -103,6 +103,11 @@
   - [Avoid branches](#avoid-branches)
   - [Build Benchmark, GTest](#build-benchmark-gtest)
     - [Use google benchmark](#use-google-benchmark)
+  - [Build Catch2 unittests](#build-catch2-unittests)
+    - [Catch2 - Build local copies from GIT repo](#catch2---build-local-copies-from-git-repo)
+    - [Catch2 - Example CMakeLists.txt file](#catch2---example-cmakeliststxt-file)
+    - [Catch2 - Build your code](#catch2---build-your-code)
+    - [Catch2 - Example test code](#catch2---example-test-code)
   - [Backup](#backup)
   - [Tools of trade](#tools-of-trade)
   - [Visual Studio C++ Dirs](#visual-studio-c-dirs)
@@ -3016,6 +3021,117 @@ BENCHMARK_MAIN();
 //     comdlg32.lib \
 //     advapi32.lib
 
+```
+
+## Build Catch2 unittests
+
+### Catch2 - Build local copies from GIT repo
+```text
+git clone https://github.com/catchorg/Catch2.git
+cd Catch2
+
+cmake . -B build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja -DBUILD_TESTING=off -DCMAKE_INSTALL_PREFIX=d:/devtools/catch2
+cmake --build build-debug --target install
+
+cmake . -B build-release -DCMAKE_BUILD_TYPE=Release -G Ninja -DBUILD_TESTING=off -DCMAKE_INSTALL_PREFIX=d:/devtools/catch2
+cmake --build build-release --target install
+```
+
+### Catch2 - Example CMakeLists.txt file
+
+Top level
+```text
+cmake_minimum_required(VERSION 3.22)
+project(TBD_Project_Name VERSION 0.1.0 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
+add_subdirectory(src)
+add_subdirectory(example)
+
+if (NOT DISABLE_CATCH2)
+    if (Catch2_ROOT)
+        find_package(Catch2 REQUIRED) # define Catch2_ROOT=d:/devtools/catch2
+    else()
+        include(FetchContent)
+        FetchContent_Declare(Catch2 GIT_REPOSITORY https://github.com/catchorg/Catch2.git GIT_TAG v3.5.0)
+        FetchContent_MakeAvailable(Catch2)
+        list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    endif()
+
+    add_subdirectory(tests)
+
+    include(CTest)
+    enable_testing()
+endif()
+
+set(CPACK_PROJECT_NAME ${PROJECT_NAME})
+set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+include(CPack)
+```
+
+Test directory
+
+```text
+include(CTest)
+include(Catch)
+
+set (AllTheTests mytest1)
+
+add_executable(mytest1 mytest1.cpp)
+
+foreach (test ${AllTheTests})
+    target_link_libraries(${test} PRIVATE disruptor Catch2::Catch2WithMain)
+    catch_discover_tests(${test}) # will take care of -- add_test(NAME ${test} COMMAND ${test})
+endforeach()
+```
+
+
+### Catch2 - Build your code
+```bash
+cmake . -B build-debug -D CMAKE_BUILD_TYPE=Debug -D Catch2_ROOT=d:/devtools/catch2 -G Ninja
+cmake --build build-debug --target all
+ctest --test-dir build-debug
+```
+
+### Catch2 - Example test code
+
+```cpp
+#include <catch2/catch_test_macros.cpp>
+
+TEST_CASE( test_name, "[tagname]" ) {
+  // setup, will execute once for each SECTION() below
+  ... some setup code ...
+
+  ... some checks to verify setup ...
+  REQUIRE(condition1);
+  CHECK(condition2);
+  REQUIRE_FALSE(condition3);
+  CHECK_FALSE(condition3);
+
+  SECTION( section1_name ) {
+    ...
+    REQUIRE(condition1_1);
+    ...
+    SECTION( nested_section1_1_name ) {
+      ...
+      REQUIRE(condition1_1_1);
+      ...
+    }
+  }
+}
+
+// benchmarking
+#include <catch2/benchmark/catch_benchmark.hpp>
+
+TEST_CASE( test_name, ... ) {
+  BENCHMARK( "benchmark 1" ) {
+    ... some_time_consuming_code ...
+    return some_value;
+  };
+}
 ```
 
 ## Backup
