@@ -3110,6 +3110,11 @@ TEST_CASE( test_name, "[tagname]" ) {
   CHECK(condition2);
   REQUIRE_FALSE(condition3);
   CHECK_FALSE(condition3);
+  REQUIRE_NOTHROW(expression);
+  REQUIRE_THROWS(expression);
+  REQUIRE_THROWS_AS(expression, exception_type);
+  REQUIRE_THROWS_WITH(expression, string_or_matcher);
+  REQUIRE_THAT(expression, Matcher);
 
   SECTION( section1_name ) {
     ...
