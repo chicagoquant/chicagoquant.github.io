@@ -17,6 +17,9 @@
     - [CPP Data Types](#cpp-data-types)
     - [CPP Number limits](#cpp-number-limits)
     - [Function pointers](#function-pointers)
+    - [CPP File IO](#cpp-file-io)
+      - [CPP CSV Files](#cpp-csv-files)
+      - [fstream](#fstream)
     - [Structured binding](#structured-binding)
     - [Swap](#swap)
   - [Crazy STL](#crazy-stl)
@@ -34,7 +37,7 @@
     - [CRTP](#crtp)
     - [Return type resolver](#return-type-resolver)
     - [virtual constructor idiom](#virtual-constructor-idiom)
-    - [std string view](#std-string-view)
+    - [std string\_view](#std-string_view)
     - [std span](#std-span)
     - [std function](#std-function)
     - [lambda expanded](#lambda-expanded)
@@ -204,6 +207,9 @@ Lots of headers
 #include <mutex>
 #include <thread>
 #include <optional>
+#include <sstream>
+#include <string_view>
+#include <iomanip>                  // for quoted(str)
 #include <boost/core/demangle.hpp>
 
 #include <ranges>
@@ -220,8 +226,8 @@ auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 {
-  cout << endl;
-  cout << string(100, '-') << endl;
+    cout << endl;
+    cout << string(100, '-') << endl;
 }
 
 // flag: -Wno-unused
@@ -710,6 +716,74 @@ memfp = &A::foo;
 A a;
 v = (a.*memfp)(x, y);
 
+```
+
+### CPP File IO
+
+#### CPP CSV Files
+```cpp
+#include <sstream>
+#include <iomanip>
+#include <ranges>
+#include <string>
+
+const char* csv_data = R"(field1,field2,field3
+10,40,"hello world"
+20,80,"abcd efg"
+)";
+
+istringstream ss(csv_data);
+string line;
+while (getline(ss, line)) {
+    for (auto v : rv::split(line, ',')){
+        // cout << boost::core::demangle(typeid(v).name()) << endl;
+        cout << quoted(string_view(v)) << endl;
+    }
+    cout << endl;
+}
+
+// alternatively
+#include <cstdio>  // for constant EOF
+#include <fstream>
+#include <string>
+
+istringstream ss(csv_data);
+string record, line;
+while (getline(ss, line)) {
+    istringstream line_ss(line);
+    while (getline(line_ss, record, ',')) {
+        cout << record << endl;
+    }
+}
+
+// alternatively
+#include <cstdio>  // for constant EOF
+#include <fstream>
+#include <string>
+
+istringstream ss(csv_data);
+string record;
+while (ss.peek() != EOF) {        // std::char_traits<char>::eof()
+    getline(ss, record, ',');
+    cout << record << endl;
+}
+```
+
+#### fstream
+
+```cpp
+#include <fstream>
+#include <string>
+
+ifstream ifs;
+ifs.open(filepath);
+if (ifs.fail()) {
+    // error
+}
+string line;
+while (ifs.peek() != EOF) {
+    getline(ifs, line);
+}
 ```
 
 ### Structured binding
@@ -1434,9 +1508,17 @@ void foo()
 }
 ```
 
-### std string view
+### std string_view
+
+should not outlive the pointed-to char array. this is a non-owning reference to a string.
+
 ```cpp
 #include <string_view>
+
+using namespace std::literals;
+
+string_view s1 = "abcd"sv;        // literal string_view
+string s2 = "abcd"s;              // literal string
 
 string_view sv = str;
 string_view sv(data, len);
@@ -1446,9 +1528,14 @@ string_view sv2 = sv.substr(m, n);
 sv.find_first_not_of(' ');
 
 cout << sv << endl;
+
+string_view sv(s.begin(), s.end()); // s is a std::string
 ```
 
 ### std span
+
+span is a generalized string_view, can be used for other range types, not just strings. for view of a contiguous sequence of data.
+
 ```cpp
 int arr[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
 vector<int> vec = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
