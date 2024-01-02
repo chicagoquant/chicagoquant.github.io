@@ -11,6 +11,7 @@
   - [Rounding up to next integer value](#rounding-up-to-next-integer-value)
   - [Uniform initialization](#uniform-initialization)
   - [Copyable Moveable](#copyable-moveable)
+  - [Method chaining](#method-chaining)
   - [Copy into a vector](#copy-into-a-vector)
     - [Copying](#copying)
   - [CPP Features](#cpp-features)
@@ -23,6 +24,7 @@
     - [Structured binding](#structured-binding)
     - [Swap](#swap)
   - [Crazy STL](#crazy-stl)
+    - [Smart Pointers](#smart-pointers)
     - [enable if](#enable-if)
       - [Usage - 4 ways](#usage---4-ways)
     - [any, variant, optional](#any-variant-optional)
@@ -169,7 +171,8 @@
   - [LMAX Disruptor](#lmax-disruptor)
   - [Aeron Messaging](#aeron-messaging)
 - [Design Patterns](#design-patterns)
-  - [DP - Creational - Factory Method](#dp---creational---factory-method)
+  - [DP - Creational - Factory Method - Identifier](#dp---creational---factory-method---identifier)
+  - [DP - Creational - Factory Method - Inheritance](#dp---creational---factory-method---inheritance)
   - [DP - Creational - Abstract Factory](#dp---creational---abstract-factory)
   - [DP - Creational - Builder](#dp---creational---builder)
   - [DP - Creational - Prototype](#dp---creational---prototype)
@@ -197,6 +200,8 @@
   - [DP - Behaviroal - Strategy](#dp---behaviroal---strategy)
   - [DP - Behaviroal - Template method](#dp---behaviroal---template-method)
   - [DP - Behaviroal - Visitor](#dp---behaviroal---visitor)
+  - [SOLID](#solid)
+  - [Design goals](#design-goals)
 
 ---
 
@@ -281,7 +286,7 @@ public:
   // A& operator=(A&& rhs) noexcept { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
 
   // replaces above 2 assignment operators
-  A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
+  A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; swap(*this, rhs); return *this; }
 
   // replaces both A::swap(b), std::swap(a, b)
   friend void swap(A& a, A& b) noexcept {
@@ -306,6 +311,14 @@ public:
 //     a.swap(b);
 //   }
 // }
+
+class B : public A {
+public:
+  B() { cout << "B::default ctor(this=" << this << ")\n"; }
+  ~B() { cout << "B::dtor(this=" << this << ")\n"; }
+
+  void foo() { cout << "B::foo(this=" << this << ")\n"; }
+};
 ```
 
 Initializations: aggregate, constant, copy, default, direct, list, reference, value, zero
@@ -669,6 +682,26 @@ protected:                                                  protected:
 };                                                          };
 ```
 
+## Method chaining
+
+```cpp
+class A {
+public:
+  A& value1(int a) { value1_ = a; return *this; }
+  A& name1(const char* s) { name1_ = s; return *this; }
+
+private:
+  int value1_ = 0;
+  const char* name1_ = nullptr;
+};
+
+A a;
+a.value1(10).name1("hello");
+foo(a);
+
+foo(A().value1(10).name1("hello"));
+```
+
 ## Copy into a vector
 ```cpp
 #include <algorithm>
@@ -982,6 +1015,28 @@ void some_func(T& obj)
 ```
 
 ## Crazy STL
+
+### Smart Pointers
+
+```cpp
+shared_ptr<A>       // reference counted raw pointer
+weak_ptr<A>         // does not change reference count
+unique_ptr<A>       // unique ownership, not copyable
+
+auto uptr = make_unique<A>();
+uptr->foo();
+
+auto us = make_unique<A[]>(10);
+us[2].foo();
+
+auto sp = make_shared<A>();
+shared_ptr<A> sp2 = sp; // ref_count++
+assert(sp.use_count() == 2);    // use_count() gives ref_count
+sp->foo();
+
+auto wp = weak_ptr(sp);
+shared_ptr<A> = wp.lock();  // convert weak into shared
+```
 
 ### enable if
 
@@ -2615,10 +2670,13 @@ while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_re
 
 ## Thread-safe Singleton, Double checked locking
 
+Scott Meyers singleton, guaranteed thread safe by compiler. Fastest, easiest, best option
+
 ```cpp
-class Singleton
+class Singleton       // Scott Meyer's singleton
 {
   Singleton() = default;
+  // delete copy, move ctor, dtor, assignment operators
 public:
   static Singleton& GetInstance() {
     static Singleton instance;
@@ -2626,6 +2684,8 @@ public:
   }
 };
 ```
+
+Singleton using optional, call_once / once_flag
 
 ```cpp
 #include <mutex>
@@ -2651,7 +2711,7 @@ Singleton* Singleton::GetInstance()
 }
 ```
 
-With double checked locking
+Singleton with double checked locking
 ```cpp
 #include <atomic>
 #include <mutex>
@@ -4565,7 +4625,8 @@ ClaimStrategy <|-- MultiThreadedClaimStrategy
 
 # Design Patterns
 
-## DP - Creational - Factory Method
+## DP - Creational - Factory Method - Identifier
+
 ```cpp
 enum class ProductId { A, B, C, D, };
 
@@ -4613,11 +4674,12 @@ class diagram
 
 ```mermaid
 classDiagram
+direction TB
 
 class Product {
   <<interface>>
-  + ~Product()
-  + foo()
+  + dtor()*
+  + foo()*
 }
 
 class ProductA {
@@ -4636,7 +4698,107 @@ class Creator {
 }
 ```
 
+## DP - Creational - Factory Method - Inheritance
+
+Create objects without having to specify the exact class of the object that will be created. Define a separate operation `factoryMethod` for creating an object. Defer instantiation to subclasses.
+
+```mermaid
+classDiagram
+direction TB
+
+class Product {
+  <<interface>>
+  + dtor()*
+  + foo()*
+}
+
+class ProductA {
+  + foo()
+}
+
+class ProductB {
+  + foo()
+}
+
+Product <|-- ProductA
+Product <|-- ProductB
+
+class ICreator {
+  <<interface>>
+  - makeProduct()*
+  + createProduct()
+}
+
+class Creator1 {
+  - makeProduct()
+}
+ICreator <|-- Creator1
+Creator1 ..> ProductB : creates
+```
+
+```cpp
+// interface for the object to be created
+class Product {
+public:
+  virtual ~Product() = default;
+  virtual void foo() = 0;
+};
+
+// concrete classes, whose objects will get created by the factory
+class ProductA : public Product {
+public:
+  void foo() override { ... }
+};
+class ProductB : public Product {
+public:
+  void foo() override { ... }
+};
+...
+
+// Base Class
+class ICreator {
+protected:
+  virtual unique_ptr<Product> makeProduct() = 0;
+
+public:
+  unique_ptr<Product> createProduct() { // factory method
+    return makeProduct();     // defined in a derived class
+  }
+
+  unique_ptr<ComplexProduct> createComplex() { // factory method
+    auto a = makeProduct();    // complex product consists of 2 products
+    auto b = makeProduct();
+    return make_unique<ComplexProduct>(a, b);
+  }
+};
+
+class CreatorA : public ICreator {
+protected:
+  unique_ptr<Product> makeProduct() override {
+    return make_unique<ProductA>();
+  }
+};
+
+class CreatorB : public ICreator {
+protected:
+  unique_ptr<Product> makeProduct() override {
+    return make_unique<ProductB>();
+  }
+};
+
+// using factory method pattern
+unique_ptr<ICreator> creator = make_unique<CreatorA>();
+auto product = creator->createProduct();
+product->foo();
+
+auto complex = creator->createComplex();
+complex->blah();
+```
+
 ## DP - Creational - Abstract Factory
+
+create families of related objects without specifying their concrete classes. encapsulating a group of individual factories
+
 ```cpp
 // abstract base
 class MapSite {
@@ -4678,17 +4840,17 @@ public:
 };
 
 // abstract factory base
-class MazeFactoryInterface {
+class IMazeFactory {
 public:
   virtual Room* createRoom(int id)            = 0;
   virtual Wall* createWall()                  = 0;
   virtual Door* createDoor(Room* a, Room* b)  = 0;
   virtual Maze* createMaze()                  = 0;
-  virtual ~MazeFactoryInterface()             = default;
+  virtual ~IMazeFactory()             = default;
 };
 
 // concrete factory class
-class MazeFactory : public MazeFactoryInterface {
+class MazeFactory : public IMazeFactory {
 public:
   Room* createRoom(int id)            override { return new Room(id); }
   Wall* createWall()                  override { return new Wall(); }
@@ -4699,7 +4861,7 @@ public:
 // client using abstract factory
 class MazeGame {
 public:
-  Maze* createGame(MazeFactoryInterface& factory) {
+  Maze* createGame(IMazeFactory& factory) {
     // create some rooms, walls, doors, add them a maze
     Maze* maze = factory.createMaze();
     Room* r1 = factory.createRoom(1);
@@ -4719,6 +4881,9 @@ public:
   }
 };
 
+MazeGame game;
+MazeFactory factory;
+game.createGame(factory);
 ```
 
 class diagram
@@ -4729,8 +4894,8 @@ direction TB
 
 class Product1 {
   <<interface>>
-  + ~Product1()
-  + foo()
+  + dtor()*
+  + foo()*
 }
 
 class Product1A {
@@ -4741,8 +4906,8 @@ Product1 <|-- Product1A
 
 class Product2 {
   <<interface>>
-  + ~Product2()
-  + bar()
+  + dtor()*
+  + bar()*
 }
 
 class Product2A {
@@ -4753,8 +4918,8 @@ Product2 <|-- Product2A
 
 class AbstractCreator {
   <<interface>>
-  + createProduct1() Product1Ptr
-  + createProduct2() Product2Ptr
+  + createProduct1() Product1Ptr*
+  + createProduct2() Product2Ptr*
 }
 
 class CreatorA {
@@ -4768,17 +4933,281 @@ CreatorA ..> Product2A : creates
 CreatorA ..> Product1A : creates
 ```
 
-
 ## DP - Creational - Builder
+
+assemble a complex object from its parts, encapsulates internal representation & construction steps of the complex object
+
+
+```mermaid
+classDiagram
+direction TB
+
+class Product1 {
+  + foo()
+}
+
+class Product2 {
+  + bar()
+}
+
+class AbstractBuilder {
+  <<interface>>
+  + reset()*
+  + buildStep1()*
+  + buildStep2()*
+}
+
+class Builder1 {
+  + reset()
+  + buildStep1()
+  + buildStep2()
+  + getResult() : Product1
+}
+
+AbstractBuilder <|-- Builder1
+
+Builder1 ..> Product1 : creates
+
+class Builder2 {
+  + reset()
+  + buildStep1()
+  + buildStep2()
+  + getResult() : Product2
+}
+
+AbstractBuilder <|-- Builder2
+
+Builder2 ..> Product2 : creates
+
+class Director {
+  - builder : AbstractBuilder
+  + CTor(builder)
+  + changeBuilder(builder)
+  + make(type)
+}
+```
+
+```cpp
+struct Car {
+  GPS gps;
+  TripComputer tripComputer;
+  Engine engine;
+  Seats seats;  
+};
+
+struct UserManual {
+  Pages pages;
+};
+
+struct IBuilder {
+  virtual void reset() = 0;
+  virtual void setSeats(...) = 0;
+  virtual void setEngine(...) = 0;
+  virtual void setTripComputer(...) = 0;
+  virtual void setGPS(...) = 0;
+};
+
+class CarBuilder : public IBuilder {
+  unique_ptr<Car> car;
+public:
+  CarBuilder() {
+    reset();
+  }
+  void reset() override {
+    car = make_unique<Car>();
+  }
+  void setSeats(...) override {
+    car->seats.update(...);
+  }
+  void setEngine(...) override {
+    car->engine.set(...);
+  }
+  void setTripComputer(...) override {
+    car->tripComputer.set(...);
+  }
+  void setGPS(...) override {
+    car->gps.set(...);
+  }
+  unique_ptr<Car> getResult() {
+    unique_ptr<Car> result = car;
+    car.reset();
+    return result;
+  }
+};
+
+class UserManualBuilder : public IBuilder {
+  unique_ptr<UserManual> manual;
+public:
+  UserManualBuilder() {
+    reset();
+  }
+  void reset() override {
+    manual = make_unique<UserManualBuilder>();
+  }
+  void setSeats(...) override {
+    manual->pages.describeSeats(...);
+  }
+  void setEngine(...) override {
+    manual->pages.describeEnginet(...);
+  }
+  void setTripComputer(...) override {
+    manual->pages.describeTripComputer(...);
+  }
+  void setGPS(...) override {
+    manual->pages.describeGPS(...);
+  }
+  unique_ptr<UserManual> getResult() {
+    unique_ptr<UserManual> result = manual;
+    manual.reset();
+    return result;
+  }
+};
+
+class Director {
+public:
+  void assembleSedan(IBuilder& builder) {
+    builder.reset();
+    builder.setSeats(5);
+    builder.setEngine(new OrdinaryEngine);
+    builder.setTripComputer(true);
+    builder.setGPS(false);
+  }
+  void assembleSportsCar(IBuilder& builder) {
+    builder.reset();
+    builder.setSeats(2);
+    builder.setEngine(new SportEngine);
+    builder.setTripComputer(true);
+    builder.setGPS(true);
+  }
+};
+
+class Customer {
+public:
+  tuple<unique_ptr<Car>, unique_ptr<UserManaul>> makeCarWithUserManual() {
+    Director director;
+
+    CarBuilder car_builder;
+    director.assembleSportsCar(car_builder);
+    auto my_car = car_builder.getResult();
+
+    UserManualBuilder manual_builder;
+    director.assembleSportsCar(manual_builder);
+    auto my_user_manual = manual_builder.getResult();
+    return make_tuple(my_car, my_user_manual);
+  }
+};
+```
+
 ## DP - Creational - Prototype
+
+clone to produce new objects
+```mermaid
+classDiagram
+direction TB
+
+class IProduct {
+  <<interface>>
+  + clone() IProduct*
+}
+
+class Product1 {
+  + clone() Product1
+}
+
+IProduct <|-- Product1
+
+class Client
+
+Client ..> Product1 : clone
+
+```
+
+```cpp
+class MapSite {
+public:
+  virtual MapSite* clone() const = 0;
+};
+
+class Room : public MapSite {
+public:
+  Room* clone() const override {
+    return new Room(*this);
+  }
+};
+
+class IMazeFactory {
+public:
+  virtual Room* makeRoom(int n) const = 0;
+};
+
+class MazePrototypeFactory : public IMazeFactory {
+  Room* modelRoom;
+public:
+  MazePrototypeFactory(Room *r) : modelRoom(r) {}
+
+  Room* makeRoom(int) const override {
+    return modelRoom->clone();
+  }
+
+  ...
+};
+
+MazeGame game;
+MazePrototypeFactory factory(new Room(1));
+game.createGame(factory);
+```
+
 ## DP - Creational - Singleton
+
+Check out Scott Meyers singleton implementation
+
 ## DP - Creational - RAII
 ## DP - Creational - Object Pool
 ## DP - Creational - Multiton
 ## DP - Creational - Lazy Initialization
 ## DP - Creational - Dependency Injecton
 
+- Service - contains some useful functionality
+- Client - uses services
+- Dependencies - services required by a client
+- Interfaces - clients do not know how the services / dependencies are implemented. Only the API. Clients do not need to change when implementation of  services changes.
+- Injector / Assembler / Container / Provider / Factory - introduces services to the client. Construct and connect clients and services, may be a complex object graph. No circular dependencies.
+
+```cpp
+class IService {
+public:
+};
+
+class Client {
+  IService* service;
+public:
+  Client(IService* svc) : service(svc) {}
+
+  void setService(IService* svc) { service = svc; }
+
+  void foo();
+};
+
+class ExampleService : public IService {
+public:
+};
+
+IService* service = new ExampleService();
+Client client = new Client(service);
+
+client.foo();
+```
+
+- Separate the concerns of constructing objects and using them
+- Loosely coupled programs
+- Client does not construct the Services
+- Dependency inversion principle
+- Inversion of control - framework first constructs an object, then passes control flow to it
+
 ## DP - Structural - Adapter
+
+
+
 ## DP - Structural - Bridge
 ## DP - Structural - Composite
 ## DP - Structural - Decorator
@@ -4797,3 +5226,19 @@ CreatorA ..> Product1A : creates
 ## DP - Behaviroal - Strategy
 ## DP - Behaviroal - Template method
 ## DP - Behaviroal - Visitor
+
+## SOLID
+- Single Responsibility - "Responsibility" means "Reason for change". A module should have only 1 responsibility, so that if it changes, it should change for 1 reason. If it has 2 responsibilities / roles, it may change if any of them changes.
+- Open-Closed - interface should be open for extension, closed for modification. **Modifying an API may break existing code that uses the API. Extending the API does not break.**
+- Liskov Substitution - if D derives from B, then wherever we can use B, we should be able to substitute with D. **Ok to substitute DERIVED in-place of BASE**
+- Interface Segregation - split very large interfaces into smaller, more specific ones. So that a client object depends on a service object interface that has only the methods that the client uses. **SMALL RELEVANT INTERFACES**
+- Dependency Inversion - high level abstractions (interfaces) **do not** depend on (concrete) low level details. Instead "details" / "concrete implementations" should depend on "abstractions" / "interfaces". **INTERFACES DO NOT DEPEND ON IMPLEMENTATION**
+
+
+## Design goals
+- Loose coupling
+- Tight cohesion
+- Separation of concerns
+- Encapsulation
+- Information hiding / Data hiding
+- IoC Inversion of Control - Like a callback. Don't call us, we will call you / Hollywood principle. Unlike procedural programming, where user code calls library functions. In a callback mechanism, user code gets called to handle something. Inverted from procedural paradigm. Event loop, web server frameworks, dependency injection use IoC
