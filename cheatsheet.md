@@ -168,6 +168,35 @@
       - [step 6 - free resources](#step-6---free-resources)
   - [LMAX Disruptor](#lmax-disruptor)
   - [Aeron Messaging](#aeron-messaging)
+- [Design Patterns](#design-patterns)
+  - [DP - Creational - Factory Method](#dp---creational---factory-method)
+  - [DP - Creational - Abstract Factory](#dp---creational---abstract-factory)
+  - [DP - Creational - Builder](#dp---creational---builder)
+  - [DP - Creational - Prototype](#dp---creational---prototype)
+  - [DP - Creational - Singleton](#dp---creational---singleton)
+  - [DP - Creational - RAII](#dp---creational---raii)
+  - [DP - Creational - Object Pool](#dp---creational---object-pool)
+  - [DP - Creational - Multiton](#dp---creational---multiton)
+  - [DP - Creational - Lazy Initialization](#dp---creational---lazy-initialization)
+  - [DP - Creational - Dependency Injecton](#dp---creational---dependency-injecton)
+  - [DP - Structural - Adapter](#dp---structural---adapter)
+  - [DP - Structural - Bridge](#dp---structural---bridge)
+  - [DP - Structural - Composite](#dp---structural---composite)
+  - [DP - Structural - Decorator](#dp---structural---decorator)
+  - [DP - Structural - Facade](#dp---structural---facade)
+  - [DP - Structural - Flyweight](#dp---structural---flyweight)
+  - [DP - Structural - Proxy](#dp---structural---proxy)
+  - [DP - Behaviroal - Chain of responsibility](#dp---behaviroal---chain-of-responsibility)
+  - [DP - Behaviroal - Command](#dp---behaviroal---command)
+  - [DP - Behaviroal - Interpreter](#dp---behaviroal---interpreter)
+  - [DP - Behaviroal - Iterator](#dp---behaviroal---iterator)
+  - [DP - Behaviroal - Mediator](#dp---behaviroal---mediator)
+  - [DP - Behaviroal - Memento](#dp---behaviroal---memento)
+  - [DP - Behaviroal - Observer](#dp---behaviroal---observer)
+  - [DP - Behaviroal - State](#dp---behaviroal---state)
+  - [DP - Behaviroal - Strategy](#dp---behaviroal---strategy)
+  - [DP - Behaviroal - Template method](#dp---behaviroal---template-method)
+  - [DP - Behaviroal - Visitor](#dp---behaviroal---visitor)
 
 ---
 
@@ -4533,3 +4562,238 @@ ClaimStrategy <|-- MultiThreadedClaimStrategy
 ```
 
 ## Aeron Messaging
+
+# Design Patterns
+
+## DP - Creational - Factory Method
+```cpp
+enum class ProductId { A, B, C, D, };
+
+// interface for the object to be created
+class Product {
+public:
+  virtual ~Product() = default;
+  virtual void foo() = 0;
+};
+
+// concrete classes, whose objects will get created by the factory
+class ProductA : public Product {
+public:
+  void foo() override { ... }
+};
+class ProductB : public Product {
+public:
+  void foo() override { ... }
+};
+...
+
+// class with the factory method
+class Creator {
+public:
+  unique_ptr<Product> createProduct(ProductId id) {
+    switch (id) {
+    case ProductId::A:
+      return make_unique<ProductA>();
+    case ProductId::B:
+      return make_unique<ProductB>();
+    ...
+    }
+    return nullptr;
+  }
+};
+// alternatively, could have a base Creator interface class and a concrete derived Creator with a factory method
+
+// using factory method pattern
+unique_ptr<Creator> creator = make_unique<Creator>();
+auto product = creator->createProduct(ProductId::D);
+product->foo();
+```
+
+class diagram
+
+```mermaid
+classDiagram
+
+class Product {
+  <<interface>>
+  + ~Product()
+  + foo()
+}
+
+class ProductA {
+  + foo()
+}
+
+class ProductB {
+  + foo()
+}
+
+Product <|-- ProductA
+Product <|-- ProductB
+
+class Creator {
+  + createProduct(id : ProductId) ProductPtr
+}
+```
+
+## DP - Creational - Abstract Factory
+```cpp
+// abstract base
+class MapSite {
+public:
+  virtual void enter() = 0;
+  virtual ~MapSite() = default;
+};
+
+// concrete objects to be created
+class Room : public MapSite {
+  int roomNumber;
+public:
+  Room(int n) : roomNumber(n) {}
+  void setSide(Direction d, MapSite* site) { ... }
+  void enter() override {}
+
+  Room(const Room&) = delete;
+  Room& operator=(const Room&) = delete;
+};
+
+class Wall : public MapSite {
+public:
+  void enter() override {}
+};
+
+class Door : MapSite {
+  Room* room1;
+  Room* room2;
+public:
+  Door(Room* a, Room* b) : room1(a), room2(b) {}
+  void enter() override {}
+};
+
+class Maze : public MapSite {
+public:
+  void addRoom(Room* r);
+  Room* getRoom(int idx) const;
+  void enter() override {}
+};
+
+// abstract factory base
+class MazeFactoryInterface {
+public:
+  virtual Room* createRoom(int id)            = 0;
+  virtual Wall* createWall()                  = 0;
+  virtual Door* createDoor(Room* a, Room* b)  = 0;
+  virtual Maze* createMaze()                  = 0;
+  virtual ~MazeFactoryInterface()             = default;
+};
+
+// concrete factory class
+class MazeFactory : public MazeFactoryInterface {
+public:
+  Room* createRoom(int id)            override { return new Room(id); }
+  Wall* createWall()                  override { return new Wall(); }
+  Door* createDoor(Room* a, Room* b)  override { return new Door(a, b); }
+  Maze* createMaze()                  override { return new Maze(); }
+};
+
+// client using abstract factory
+class MazeGame {
+public:
+  Maze* createGame(MazeFactoryInterface& factory) {
+    // create some rooms, walls, doors, add them a maze
+    Maze* maze = factory.createMaze();
+    Room* r1 = factory.createRoom(1);
+    Room* r2 = factory.createRoom(2);
+    Door* aDoor = factory.createDoor(r1, r2);
+    aMaze->addRoom(r1);
+    aMaze->addRoom(r2);
+    r1->setSide(North, factory.createWall());
+    r1->setSide(East, aDoor);
+    r1->setSide(South, factory.createWall());
+    r1->setSide(West, factory.createWall());
+    r2->setSide(North, factory.createWall());
+    r2->setSide(East, factory.createWall());
+    r2->setSide(South, factory.createWall());
+    r2->setSide(West, aDoor);
+    return maze;
+  }
+};
+
+```
+
+class diagram
+
+```mermaid
+classDiagram
+direction TB
+
+class Product1 {
+  <<interface>>
+  + ~Product1()
+  + foo()
+}
+
+class Product1A {
+  + foo()
+}
+
+Product1 <|-- Product1A
+
+class Product2 {
+  <<interface>>
+  + ~Product2()
+  + bar()
+}
+
+class Product2A {
+  + bar()
+}
+
+Product2 <|-- Product2A
+
+class AbstractCreator {
+  <<interface>>
+  + createProduct1() Product1Ptr
+  + createProduct2() Product2Ptr
+}
+
+class CreatorA {
+  + createProduct1() Product1Ptr
+  + createProduct2() Product2Ptr
+}
+
+AbstractCreator <|-- CreatorA
+
+CreatorA ..> Product2A : creates
+CreatorA ..> Product1A : creates
+```
+
+
+## DP - Creational - Builder
+## DP - Creational - Prototype
+## DP - Creational - Singleton
+## DP - Creational - RAII
+## DP - Creational - Object Pool
+## DP - Creational - Multiton
+## DP - Creational - Lazy Initialization
+## DP - Creational - Dependency Injecton
+
+## DP - Structural - Adapter
+## DP - Structural - Bridge
+## DP - Structural - Composite
+## DP - Structural - Decorator
+## DP - Structural - Facade
+## DP - Structural - Flyweight
+## DP - Structural - Proxy
+
+## DP - Behaviroal - Chain of responsibility
+## DP - Behaviroal - Command
+## DP - Behaviroal - Interpreter
+## DP - Behaviroal - Iterator
+## DP - Behaviroal - Mediator
+## DP - Behaviroal - Memento
+## DP - Behaviroal - Observer
+## DP - Behaviroal - State
+## DP - Behaviroal - Strategy
+## DP - Behaviroal - Template method
+## DP - Behaviroal - Visitor
