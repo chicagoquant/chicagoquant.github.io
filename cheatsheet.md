@@ -252,6 +252,7 @@ namespace rs = std::ranges;
 namespace rv = std::ranges::views;   // same as std::views
 
 using namespace std;
+using namespace std::string_literals;   // for "..."s
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -260,7 +261,8 @@ auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 {
-    cout << endl;
+    auto s = "hello"s;
+    cout << s << endl;
     cout << string(100, '-') << endl;
 }
 
