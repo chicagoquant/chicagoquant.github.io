@@ -223,7 +223,7 @@ using vpii = vector<pii>;
 #define sz(x) (int)(x).size()
 ```
 
-Lots of headers
+Lots of headers [Open this in Wandbox](https://wandbox.org/permlink/BiJDPA9v1OQqhHzo)
 ```cpp
 #include <iostream>
 #include <variant>
