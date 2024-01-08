@@ -253,3 +253,12 @@ __DOTNET_PREFERRED_BITNESS=32
 __VSCMD_PREINIT_PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\dotnet\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\User\AppData\Local\Microsoft\WindowsApps;
 
 ```
+
+## VSCode
+
+Cheatsheet
+```text
+Match brackets -> Ctrl + Shift + \
+Fold All  -> Ctrl + K, Ctrl + 0
+Unfold All  -> Ctrl + K, Ctrl + J
+```

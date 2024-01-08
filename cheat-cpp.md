@@ -3112,6 +3112,44 @@ TEST_CASE( test_name, ... ) {
 }
 ```
 
+## Boost Intrusive
+
+### doubly linked list
+```cpp
+#include <boost/intrusive/list.hpp>
+
+namespace BI = boost::intrusive;
+
+// using base class
+class X : public BI::list_base_hook<BI::link_mode<BI::normal_link>>
+{};
+
+using XList = BI::list<X, BI::constant_time_size<true>>;
+
+X x1, x2, x3;
+XList l;
+
+l.push_back(x1);
+l.push_back(x2);
+l.push_back(x3);
+
+// using hook as a class member
+class Y
+{
+public:
+  BI::list_member_hook<> member_hook_;
+};
+
+using YList = BI::list<Y, BI::member_hook<Y, BI::list_member_hook<>, &Y::member_hook_>>;
+
+Y y1, y2;
+YList l2;
+l2.push_back(y1);
+l2.push_back(y2);
+
+l2.clear();
+```
+
 ## Tools of trade
 - Google benchmark, catch2, nanobenchmark
 - Google test, doctest
