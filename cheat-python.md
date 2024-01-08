@@ -405,3 +405,46 @@ BOOST_PYTHON_MODULE(mymodule)
 }
 ```
 
+## Pandas
+
+```python
+import numpy as np, pandas as pd
+s = pd.Series([1, 3, 5, 6, 8])
+dates = pd.date_range('20240101', periods=6)
+# [2024-01-01, ..., 2024-01-06]
+
+df = pd.DataFrame(np.random.randn(6, 4), index=dates, columns=['A', 'B', 'C', 'D'])
+df = pd.DataFrame({
+    "A": 1.0,
+    "B": pd.Timestamp("20240101"),
+    "C": pd.Series(1, index=list(range(4)), dtype='float32'),
+    "D": np.array([3]*4, dtype='int32'),
+    "E": pd.Categorical(["test", "train", "test", "train"]),
+    "F": "foo",
+})
+df.dtypes
+
+df.head()
+df.tail(3)
+df.index
+df.columns
+df.to_numpy()   # np.array([...])
+df.describe()
+df.T            # transpose
+df.sort_index(axis=1, ascending=False)    # columns in decreasing order: 'D', 'C', 'B', 'A'
+df.sort_values(by="B")
+
+# selection
+df["A"]
+df[0:3]
+df["20240101":"20240103"]
+df.loc[dates[0]]
+df.loc[:, ["A","B"]]
+
+df.iloc[3]
+df.iloc[3:5, 0:2]
+
+df[df["A"] > 0]
+df[df > 0]
+df2 = df.copy()
+```
