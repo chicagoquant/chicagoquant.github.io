@@ -76,6 +76,9 @@ public:
   // default
   A() { cout << "A::default ctor(this=" << this << ")\n"; }
   ~A() { cout << "A::dtor(this=" << this << ")\n"; }
+  // A(T x) : data_(move(x))
+  // { cout << "A::conversion ctor(this=" << this << ", x=" << &x << ")\n"; }
+  // operator T() const { return data_; }   // conversion-function, can specify explicit
   A(A const& rhs) { cout << "A::copy ctor(this=" << this << ", const A& rhs=" << &rhs << ")\n"; }
   A(A&& rhs) noexcept { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
 
@@ -2046,6 +2049,20 @@ example: type_name<int>()
 // see: https://github.com/willwray/type_name
 ```
 
+## CPP Stack trace
+```cpp
+// C++ stacktrace backtrace GCC
+#include <unistd.h>
+#include <execinfo.h>
+void print_stacktrace()
+{
+    void* array[50];
+    auto size = backtrace(array, 50);
+
+    backtrace_symbols_fd(array, size, STDOUT_FILENO);
+}
+```
+
 ## RAII for malloc/free
 ```cpp
 unique_ptr<T, void(*)(void*)> raii_ptr( static_cast<T*>(::malloc(size)), ::free );
@@ -3148,6 +3165,81 @@ l2.push_back(y1);
 l2.push_back(y2);
 
 l2.clear();
+```
+
+## Sean Parent Undo Idiom
+- Runtime-Concept Idiom
+- Concept based Polymorphism
+- Concept-Model Idiom
+- Inheritance is the base class of evil
+- Type Erasure?
+
+```cpp
+class object_t {
+public:
+  template<typename T>
+  object_t(T x) : self_(make_shared<model<T>>(move(x)) {}
+
+  friend void draw(object_t& x, ostream out, size_t pos) { x.self_->draw_(out, pos); }
+
+  private:
+  struct concept_t {
+    virtual ~concept_t() = default;
+    virtual void draw_(ostream& os, size_t pos) const = 0;
+  };
+  template<typename T>
+  struct model final : concept_t {
+    model(T x) : data_(move(x)) {}
+    void draw_(ostream& out, size_t pos) const override { draw(data_, out, pos); }
+
+    T data_;
+  };
+  shared_ptr<const concept_t> self_;
+};
+
+using document_t = vector<object_t>;
+using history_t = vector<document_t>;
+
+constexpr int indent = 2;
+void draw(const document_t&, ostream& out, size_t pos) {
+  out << string(pos, ' ') << "<document>" << endl;
+  for (const auto& e : x) draw(e, out, pos+indent);
+  out << string(pos, ' ') << "</document>" << endl;
+}
+
+// assert(h.size()) in all 3
+void commit(history_t& h)         { h.push_back(h.back()); }
+void undo(history_t& h)           { h.pop_back(); }
+document_t& current(history_t& h) { return h.back(); }
+
+class my_class_t { /* ... */ };
+void draw(const my_class_t&, ostream& out, size_t pos) {
+  out << string(pos, ' ') << "my_class_t" << endl;
+}
+
+history_t h(1);
+current(h).emplace_back(0);
+current(h).emplace_back(string("hello!"));
+draw(current(h), cout, 0);
+cout << string(100, '-') << endl;
+commit(h);
+current(h)[0] = 42.5;
+auto saving = async([document=current(h)])() {
+  this_thread::sleep_for(chrono::seconds(3));
+  cout << "-- 'save' --" << endl;
+  draw(document, cout, 0);
+});
+current(h)[1] = string("world");
+current(h).emplace_back(current(h));
+current(h).emplace_back(my_class_t());
+
+draw(current(h), cout, 0);
+cout << string(100, '-') << endl;
+
+undo(h);
+draw(current(h), cout, 0);
+
+// see: https://sean-parent.stlab.cc/presentations/2017-01-18-runtime-polymorphism/2017-01-18-runtime-polymorphism.pdf
 ```
 
 ## Tools of trade
