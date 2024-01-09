@@ -1,5 +1,7 @@
 # Competitive programming
 
+[github-repo](https://github.com/chicagoquant/chicagoquant.github.io/) [self](https://github.com/chicagoquant/chicagoquant.github.io/blob/main/cheat-cpp.md)
+
 ## Header for C++ contests
 ```cpp
 #include <bits/stdc++.h>
