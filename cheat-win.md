@@ -262,3 +262,15 @@ Match brackets -> Ctrl + Shift + \
 Fold All  -> Ctrl + K, Ctrl + 0
 Unfold All  -> Ctrl + K, Ctrl + J
 ```
+
+## Dotfiles in GIT
+
+stick the alias line in `\tools\cmder\current\config\user_aliases.cmd`
+
+```bash
+git init --bare $HOME/.cfg
+alias dotfiles='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+dotfiles config --local status.showUntrackedFiles no
+
+dotfiles=git --git-dir=C:\temp\...\git-repos\dotfiles.git --work-tree=C:\ $*
+```
