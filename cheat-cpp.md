@@ -61,6 +61,7 @@ int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
     auto s = "hello"s;
     cout << s << endl;
     cout << string(100, '-') << endl;
+    return EXIT_SUCCESS;
 }
 
 // flag: -Wno-unused
@@ -3177,6 +3178,11 @@ l2.clear();
 - Type Erasure?
 
 ```cpp
+// default implementation
+template <typename T>
+void draw(const T& x, ostream& out, size_t position)
+{ out << string(position, ' ') << x << endl; }
+
 class object_t {
 public:
   template<typename T>
@@ -3243,6 +3249,25 @@ draw(current(h), cout, 0);
 
 // see: https://sean-parent.stlab.cc/presentations/2017-01-18-runtime-polymorphism/2017-01-18-runtime-polymorphism.pdf
 ```
+
+Alernative
+```cpp
+using document_t = vector<function<void(ostream&,size_t)>>;
+
+document_t d;
+int n = 0;
+d.emplace_back([n](ostream& os, size_t pos) { draw(n, os, pos); })
+
+void draw(document_t& d, ostream& out, size_t pos)
+{
+  for (auto f : d)
+  {
+    f(out, pos);
+  }
+}
+
+```
+
 
 ## Tools of trade
 - Google benchmark, catch2, nanobenchmark
