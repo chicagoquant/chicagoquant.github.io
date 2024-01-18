@@ -817,6 +817,59 @@ void some_func(T& obj)
 }
 ```
 
+### Allocators
+
+- Doug Lea malloc (dlmalloc)
+- pthread malloc (ptmalloc), derived from dlmalloc
+- glibc malloc (derived from ptmalloc)
+- tcalloc - google's malloc, fast, multi-threaded. used in chrome, safari
+  - thread local ThreadCache for each thread
+  - Small object (upto 32KB) allocation
+  - CentralCache for large objects, 4k page aligned
+- jemalloc - emphasizes fragmentation avoidance and scalable concurrency support, used in Firefox
+
+```cpp
+template<typename T>
+struct Mallocator
+{
+  using value_type = T;
+
+  Mallocator() noexcept = default;
+
+  template<typename U> Mallocator(const Mallocator<U>&) noexcept = default;
+  template<typename U> bool operator==(const Mallocator<U>&) const noexcept { return true; }
+  template<typename U> bool operator!=(const Mallocator<U>&) const noexcept { return false; }
+
+  T* allocate(const size_t n) const {
+    if (n == 0) { return nullptr; }
+    if (n > static_cast<size_t>(-1)/sizeof(T)) { throw std::bad_array_new_length(); }
+    void* const pv = malloc(n* sizeof(T));
+    if (!pv) { throw std::bad_alloc(); }
+    return static_cast<T*>(pv);
+  }
+
+  void deallocate(T* const p, size_t) const noexcept { free(p); }
+
+  Mallocator(void* begin, void* end);
+  void release();
+
+  // not copyable
+  Mallocator(const Mallocator&) = delete;
+  Mallocator& operator=(const Mallocator&) = delete;
+};
+
+std::vector<int> v;
+std::vector<int, Mallocator> v;
+
+// polymorphic allocator
+struct NewDeleteAllocator : public std::pmr::polymorphic_allocator< {
+  // ...
+};
+
+NewDeleteAllocator alloc;
+std::pmr::vector<int> v(&alloc); // not usual vector
+```
+
 ## Crazy STL
 
 ### Smart Pointers
@@ -3168,6 +3221,45 @@ l2.push_back(y1);
 l2.push_back(y2);
 
 l2.clear();
+```
+
+### Intrusive Pointer
+
+- benefits:
+  - because refcount is saved in the object, can create many intrusive_ptr to the same object. can't do with shared_ptr
+  - can give better performance than shared_ptr.
+    - but note that make_shared() will create both the object and refcount allocated next to each other, giving better performance
+- disadvantages:
+  - have to add a refcount field in every class
+  - have to declare functions to manage the refcount
+  - intrusive_ptr does not have weak_ptr
+
+```cpp
+#include <boost/intrusive_ptr.hpp>
+
+class X {
+  std::string name;
+  int age;
+
+  long references;
+  X() : references(0) {}
+};
+
+template<typename T>
+inline void intrusive_ptr_add_ref(T* expr){
+    ++expr->references;
+}
+
+template<typename T>
+inline void intrusive_ptr_release(T* expr){
+    if(--expr->references == 0)
+        delete expr;
+}
+
+{
+  boost::intrusive_ptr<X> x(new X);
+  foo(x->name);
+}
 ```
 
 ## Sean Parent Undo Idiom
