@@ -2823,6 +2823,91 @@ double duration(timespec a, timespec b) {
 }
 ```
 
+### ReaD Time Stamp Counter RDTSC
+
+RDTSC - how many CPU clock cycles have passed? a relative time, also may be reordered by the CPU (see: How to Benchmark Code Execution Times on Intel IA-32 and IA-64 Instruction Set Architectures Sep 2010 pdf Gabriele Paolini, https://stackoverflow.com/questions/13772567/how-to-get-the-cpu-cycle-count-in-x86-64-from-c/51907627#51907627)
+
+```cpp
+// warning: do not use this, CPU may reorder it relative to other instructions
+// will add noise to measurements
+static __inline__ int64_t rdtsc(void)
+{
+  unsigned a, d;
+  asm volatile("rdtsc" : "=a" (a), "=d" (d));               // may be reordered by cpu
+  return ((unsigned long)a) | (((unsigned long)d) << 32);
+}
+
+int64_t t0, t1, delta;
+
+t0 = rdtsc ();               // may be reordered by cpu
+/* code to be benchmarked */
+...
+t1 = rdtsc ();               // may be reordered by cpu
+delta = t1-t0;
+```
+
+Note: could use `t0 = __rdtsc()` or `t1 = __rdtscp()` with `_mm_lfence()`
+
+RDTSCP - Read timestamp counter and Processor ID, pair it with CPUID instruction which acts as a memory barrier.
+
+first cpuid + rdtsc ensures instructions before this do not cross the barrier down.
+
+rdtscp itself ensures anything before that does not get reordered later, but later stuff can move up, to prevent that we have rdtscp+cpuid
+
+Note: may use load-fence `lfence` instead of `cpuid` for barrier
+
+```cpp
+static __inline__ int64_t rdtsc_start(void)
+{
+  unsigned a, d;
+  asm volatile("cpuid" ::: "%rax", "%rbx", "%rcx", "%rdx"); // memory barrier/fence, expensive
+  asm volatile("rdtsc" : "=a" (a), "=d" (d));
+  return ((unsigned long)a) | (((unsigned long)d) << 32);
+}
+
+static __inline__ int64_t rdtsc_end(void)
+{
+  unsigned a, d;
+  asm volatile("rdtscp" : "=a" (a), "=d" (d));
+  asm volatile("cpuid" ::: "%rax", "%rbx", "%rcx", "%rdx"); // memory barrier/fence, expensive
+  return ((unsigned long)a) | (((unsigned long)d) << 32);
+}
+
+int64_t t0, t1, delta;
+
+t0 = rdtsc_start ();
+/* code to be benchmarked */
+...
+t1 = rdtsc_end ();
+delta = t1-t0;
+```
+
+## Set CPU affinity
+```cpp
+cpu_set_t my_cpu;
+/* Skip CPU0 - let the OS run on that one */
+int my_cpu_num = (tid % (num_cpus-1))+1;
+
+CPU_ZERO (&my_cpu);
+CPU_SET (my_cpu_num, &my_cpu);        // use any CPU other than CPU0
+if (sched_setaffinity (0, sizeof(my_cpu), &my_cpu) == -1) {
+  perror ("setaffinity failed");
+}
+```
+
+```text
+# in boot-loader kernel command line, to tell it to not use CPUs 1-7
+linux ... isolcpus=1,2,3,4,5,6,7
+
+taskset -p $$            # to check cpu used by your shell
+
+# set interrupts to go to CPU0 only
+for f in /proc/irq/*/smp_affinity
+do
+  echo 1 > $f
+done
+```
+
 ## Sleep in your code
 ```cpp
 #include <unistd.h>
