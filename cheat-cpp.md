@@ -2789,6 +2789,50 @@ int main()
 
 ```
 
+## Hijack clock
+
+```shell
+LD_PRELOAD=libmy_library.so ./program_using_clock
+
+cat CMakeLists.txt
+add_library(my_library SHARED my_clock_hijacker.cpp)
+target_link_libraries(my_library rt dl)
+# g++ -Wall -fPIC -shared -o libmy_library.so my_clock_hijacker.cpp
+```
+
+```cpp
+#include <time.h>
+#include <sys/time.h>
+#include <dlfcn.h>
+
+static int (*saved_gettimeofday)(struct timeval* tv, struct timezone* tz);
+static int (*saved_clock_gettime)(clockid_t clk_id, struct timespec *tp);
+
+extern "C" int gettimeofday(struct timeval* tv, struct timezone* tz) noexcept
+{
+  // TODO: ... generate your own time, fill tv, tz ...
+  return 0;
+}
+
+extern "C" int clock_gettime(clockid_t clk_id, struct timespec* tp)
+{
+  if (clk_id == CLOCK_REALTIME) {
+    // TODO: ... fill tp ...
+    return 0;
+  }
+  return saved_clock_gettime(clk_id, tp);
+}
+
+// library constructor function, will be called before dlopen() returns
+__attribute__((constructor))
+static void library_init(void)
+{
+  // see man dlsym -- Find the next occurrence of the desired symbol in the search order after the current object.
+  saved_gettimeofday = (decltype(saved_gettimeofday))dlsym(RTLD_NEXT, "gettimeofday");
+  saved_clock_gettime = (decltype(saved_clock_gettime))dlsym(RTLD_NEXT, "clock_gettime");
+}
+```
+
 ## Timeit
 ```cpp
 #include <chrono>
