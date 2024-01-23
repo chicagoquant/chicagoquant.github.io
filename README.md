@@ -18,3 +18,4 @@
 - [Num 4 dp](cheat-dp.md)
 - [Num 5 sysprog](cheat-sysprog.md)
 - [Num 6 win](cheat-win.md)
+- [Num 7 typescript](cheat-typescript.md)
