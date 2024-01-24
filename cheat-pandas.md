@@ -45,7 +45,7 @@ df.col.fillna('Unknown')
 df.col.replace('oldstr', 'newstr')
 
 df.rename(columns={'oldname':'newname',})
-df.rename(index={0:'rownewindex1',1:rownewindex2',}) # use set_index() instead
+df.rename(index={0:'rownewindex1',1:'rownewindex2',}) # use set_index() instead
 
 df = pd.concat([ df1, df2 ])
 df = df1.join(df2, lsuffix='_L', rsuffix='_R') # suffix for columns that have same name
@@ -345,7 +345,7 @@ sns.lineplot(data=df[col], label="Some label")
 plt.xlabel("x-axis label")
 ```
 
-# Bar Chart
+## Bar Chart
 ```python
 plt.figure(figsize=(10,6))
 plt.title("Some title")
