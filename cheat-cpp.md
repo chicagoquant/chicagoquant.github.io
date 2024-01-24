@@ -2834,6 +2834,9 @@ static void library_init(void)
 ```
 
 ## Timeit
+
+Even though these time functions ultimately end up making a system call, these syscalls are not typically expensive. These are VDSO calls in Linux, implemented in user-space, very very fast.
+
 ```cpp
 #include <chrono>
 

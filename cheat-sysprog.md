@@ -220,6 +220,123 @@ int ef_driver_close(ef_driver_handle dh);
 
 ## LMAX Disruptor
 
+LMAX Concepts
+* Disruptor
+* Ring Buffer[Event] - store and update of events
+* Sequence - where a component is up to
+* Sequencer - SP, MP - passing of events between P and C
+* Sequence Barrier - are there any events available for the C
+* Wait Strategy - how C will wait for events (lock-free?)
+* Event - data passed from P to C
+* Batch Event Processor - event loop for handling events by C
+* Event Handler - C, callback
+* Producer - enqueue events
+
+LMAX Disruptor - high throughput, low latency
+- Queues between processing stages - latency
+- Contention in multiple threads
+- Mechanical Sympathy - understanding how CPUs work
+- Disruptor -- data structure, pattern of use
+- Mean latency x 3 better than queue
+- Throughput x 8 higher than queue
+- Asynchronous event processing architecture
+- Less write contention
+- Lower concurrency overhead
+- Cache friendly
+- Less jitter
+- 25 million messages per second, latency < 50 nsec
+- Theoretical limit of processor to exchange data between cores
+
+LMAX
+- Order Matching Engine
+- Real-time risk management
+- Transaction Processing System (Highly available, In-memory)
+
+- Staged Event Driven Architecture (SEDA)
+- Actor model
+- Concurrency - Tasks in parallel, but contention for resources
+- Mutual Exclusion, Visibility of Change
+
+- Avoid mutual exclusion - only 1 thread modifies
+- Multiple writers - complex expensive coordination, locking
+- Locking - context switch to kernel
+- Compare and Swap (CAS) - processor has to lock its instruction pipeline (for atomicity), use a memory barrier (visible to threads)
+
+- Out-of-order instruction execution
+- Out-of-order loads and stores of memory
+- Memory barrier -> when ordering of memory updates is important
+- Hardware memory barrier - CPU Processor
+- Software barrier - Compiler
+
+- Cache - fast hardware hash table without chaining
+- Cache coherence between processors
+- "Store Buffers" - offload writes to caches
+- "Invalidate Queues" - cache coherency
+
+- Read Memory Barrier
+- Write Memory Barrier
+
+- Caches are organized in Cache Lines (64 bytes granularity)
+- False sharing - 2 variables stored in same cache line, being updated by 2 threads
+- Predictable memory access pattern helps CPU pre-fetch cache lines
+
+- Queues - Bounded / Unbounded, Speed of Producers vs Speed of Consumers
+- Contention points - Head, Tail, Size
+- Head, Tail in same cache line
+
+- Storage of items being exchanged
+- Claiming the next sequence for exchange, coordination of producers
+- Notify that a new item is available, coordination of consumers
+
+Ring-Buffer - Pre-allocated contiguous memory, array of chunks. Size power of 2 so that remainder calculation is fast, bitmask (Size-1)
+
+No contention on the ring-buffer slot for writing to it
+
+Producer
+- 1 producer, no contention on sequence or entry allocation
+- Multiple producers, claim next entry contention. Simple CAS operation on sequence number for the slot
+- Copy the data to slot, then make it public to consumers by committing the sequence
+- Commit - without CAS, simple busy spin until the other producers have reached this sequence in their own commit. Then advance the cursor signifying the next available entry for consumption
+- Producers avoid wrapping the ring, track the sequence of consumers, a read operation before write to the ring buffer
+
+Consumer
+- Wait for a sequence to become available, then read the chunk
+- CPU resource precious, then wait on condition variable within a lock, that gets signaled by producers. Point of contention, not good for latency, throughput
+- Loop checking the cursor, currently available sequence in the ring buffer. With/without thread yield (no contention)
+
+Lock free MPMC queues - require multiple CAS operations on the Head, Tail, and Size counters
+	
+Sequence
+- NextAvailableSlotSequence, Producer claim the next slot sequence before writing to the ring
+  * Simple counter (SP)
+  * Atomic counter, updated using CAS (MP)
+- Cursor, latest entry in the ring available to consumers, producer commit to this after writing data to the slot in the ring
+  * Multiple Producers
+    - `long expectedSequence = claimedSequence-1;`
+```
+while (cursor != expectedSequence) {}
+cursor = claimedSequence;
+```
+
+Classes
+- `RingBuffer<WaitStrategy, ClaimStrategy>`
+  * EntryFactory
+  * Entry
+- ProducerBarrier ( claim, commit )
+- ConsumerBarrier
+- Consumer
+- WaitStrategy
+  * BusySpingWaitStrategy
+  * YieldingWaitStrategy
+  * BlockingWaitStrategy
+- ClaimStrategy
+  * SingleThreadedClaimStrategy
+  * MultiThreadedClaimStrategy
+	
+LMAX - London Multi-Asset Exchange
+- Betfair spinoff, betting, gambling
+- Extreme Transaction Processing (XTP)
+
 ```cpp
 class RingBuffer<E>;
 
