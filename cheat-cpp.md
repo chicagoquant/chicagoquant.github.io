@@ -1155,8 +1155,8 @@ struct Optional<T>  // messsy version
 {
   bool got_value;
   aligned_storage_t<sizeof(T), alignof(T)> buf;  // space for T contained_value
-  optional(const T& t) : got_value(true) { ::new ((void*)&buf) T(t); } // in-place new
-  ~optional() { if (got_value) { reinterpret_cast<T&>(buf).~T(); } }   // destructor
+  Optional(const T& t) : got_value(true) { ::new ((void*)&buf) T(t); } // in-place new
+  ~Optional() { if (got_value) { reinterpret_cast<T&>(buf).~T(); } }   // destructor
 };
 
 struct Optional<T>  // better, with anonymous union
@@ -1166,9 +1166,9 @@ struct Optional<T>  // better, with anonymous union
     T val;
   };
   bool engaged;
-  optional() : dummy(0), engaged(false) {}
-  optional(const T& t) : val(t), engaged(true) {}
-  ~optional() {
+  Optional() : dummy(0), engaged(false) {}
+  Optional(const T& t) : val(t), engaged(true) {}
+  ~Optional() {
     if constexpr (!is_trivially_destructible<T>{}) {
       if (engaged) val.~T();
     }
