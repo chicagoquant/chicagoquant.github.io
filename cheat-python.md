@@ -289,6 +289,54 @@ logging.basicConfig(filename=LOG_FILENAME,
 logging.debug('This message should go to the log file')
 ```
 
+Diagram
+
+```mermaid
+classDiagram
+direction TD
+
+class Logger {
+    - level : DEBUG/INFO/WARN/...
+    - filters
+    - debug()
+    - info()
+    - warning()
+    - error()
+    - exception()
+    - critical()
+}
+
+class Handler {
+    - level
+    - filters
+    - formatter
+}
+
+Logger *-- Handler : handlers
+Handler <|-- StreamHandler
+Handler <|-- RotatingFileHandler
+
+note for StreamHandler "stdout"
+note for RotatingFileHandler "file"
+
+class LogRecord {
+    - message
+    - level
+    - created
+    - thread
+    - ...
+}
+```
+
+loggers: `root`, `MyApp1`, `MyApp1.SubModule1`
+
+```mermaid
+flowchart
+
+Root[Root Logger] --- MyApp[MyApp1 Logger]
+MyApp --- SubModule[MyApp1.Submodule1 Logger]
+```
+
 #### logging config file
 
 ```python
@@ -306,8 +354,9 @@ def main():
         import json
         config = json.load(inp)
         # or
-        import yaml             # pip install pyyaml
-        config = yaml.load(inp)
+        #pip install pyyaml
+        #import yaml
+        #config = yaml.safe_load(inp)
     logging.config.dictConfig(config)
 
     logging.basicConfig(level="INFO") # root logger level
@@ -402,7 +451,6 @@ using namespace boost::python;
 
 BOOST_PYTHON_MODULE(my_module_name)
 {
-
 }
 
 enum_<CPP_ENUM_TYPENAME>("PYTHON_ENUM")
