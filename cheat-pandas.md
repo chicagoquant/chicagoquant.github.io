@@ -1,5 +1,49 @@
 # Pandas
 
+```python
+import numpy as np, pandas as pd
+s = pd.Series([1, 3, 5, 6, 8])
+dates = pd.date_range('20240101', periods=6)
+# [2024-01-01, ..., 2024-01-06]
+
+df = pd.DataFrame(np.random.randn(6, 4), index=dates, columns=['A', 'B', 'C', 'D'])
+df = pd.DataFrame({
+    "A": 1.0,
+    "B": pd.Timestamp("20240101"),
+    "C": pd.Series(1, index=list(range(4)), dtype='float32'),
+    "D": np.array([3]*4, dtype='int32'),
+    "E": pd.Categorical(["test", "train", "test", "train"]),
+    "F": "foo",
+})
+df.dtypes
+
+df.head()
+df.tail(3)
+df.index
+df.columns
+df.to_numpy()   # np.array([...])
+df.describe()
+df.T            # transpose
+df.sort_index(axis=1, ascending=False)    # columns in decreasing order: 'D', 'C', 'B', 'A'
+df.sort_values(by="B")
+
+# selection
+df["A"]
+df[0:3]
+df["20240101":"20240103"]
+df.loc[dates[0]]
+df.loc[:, ["A","B"]]
+
+df.iloc[3]
+df.iloc[3:5, 0:2]
+
+df[df["A"] > 0]
+df[df > 0]
+df2 = df.copy()
+```
+
+# Kaggle Lessons
+
 https://www.kaggle.com/learn/pandas
 
 ```python
@@ -214,7 +258,7 @@ mae = scores.mean()
 
 def get_score(n_estimators):
     """Return the average MAE over 3 CV folds of random forest model.
-    
+
     Keyword argument:
     n_estimators -- the number of trees in the forest
     """
@@ -242,9 +286,9 @@ from xgboost import XGBRegressor
 
 my_model = XGBRegressor(random_state=0)
 my_model = XGBRegressor(n_estimators=1000, learning_rate=0.05, n_jobs=4)
-my_model.fit(X_train, y_train, 
-             early_stopping_rounds=5, 
-             eval_set=[(X_valid, y_valid)], 
+my_model.fit(X_train, y_train,
+             early_stopping_rounds=5,
+             eval_set=[(X_valid, y_valid)],
              verbose=False)
 mae = mean_absolute_error(predictions, y_valid)
 ```

@@ -23,11 +23,13 @@ if __name__ == '__main__':
 ## Class boilerplate
 
 ```python
+from functools import total_ordering
+@total_ordering
 class Klass:
     def __init__(self, id: int, sval: str, ival: int):
-        self.id: int = id
-        self.sval: str = sval
-        self.ival: int = ival
+        self._id: int = id
+        self._sval: str = sval
+        self._ival: int = ival
 
     def __eq__(self, other):
         if other.__class__ is not self.__class__:
@@ -35,13 +37,27 @@ class Klass:
         return (other.id, other.sval, other.ival) == (self.id, self.sval, self.ival)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(id={self.id!r}, sval={self.sval!r}, ival={self.ival!r})"
+        return f"{self.__class__.__qualname__}(id={self.id!r}, sval={self.sval!r}, ival={self.ival!r})"
 
-    def __hash__(self):
-        ...
+    def __hash__(self):     # by default classes are not hashable, define this to make it hashable
+        return hash((self.id, self.sval, self.ival))
+
+    @property
+    def id(self):           # to make it immutable, so that Klass can be a key for a dict
+        return self._id
+    @property
+    def sval(self):         # to make it immutable
+        return self._sval
+    @property
+    def ival(self):         # to make it immutable
+        return self._ival
 
     def __lt__(self, other):
-        ...
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return (self.id, self.sval, self.ival) < (other.id, other.sval, other.ival)
+
+    # total_ordering fills out the missing <=, > etc, as long as you have 2 like eq, lt
 
 klass = Klass(id=1, sval="hello", ival=100)
 ```
@@ -61,6 +77,18 @@ class User:                                     | class User:
                                                 |
 klass = Klass(id=1, sval="hello", ival=100)     | klass = Klass(id=1, sval="hello", ival=100)
 ```
+
+Note: just calling `dataclasses.dataclass` on a class will modify the definition.
+
+```python
+class X:
+    ...
+
+Y = dataclasses.dataclass(X)
+assert(id(Y) == id(X))
+```
+
+But dataclass will recreate a new class if you use slots, will not reuse the original class
 
 ## Web requests
 
@@ -582,46 +610,14 @@ BOOST_PYTHON_MODULE(mymodule)
 }
 ```
 
-## Pandas
 
-```python
-import numpy as np, pandas as pd
-s = pd.Series([1, 3, 5, 6, 8])
-dates = pd.date_range('20240101', periods=6)
-# [2024-01-01, ..., 2024-01-06]
-
-df = pd.DataFrame(np.random.randn(6, 4), index=dates, columns=['A', 'B', 'C', 'D'])
-df = pd.DataFrame({
-    "A": 1.0,
-    "B": pd.Timestamp("20240101"),
-    "C": pd.Series(1, index=list(range(4)), dtype='float32'),
-    "D": np.array([3]*4, dtype='int32'),
-    "E": pd.Categorical(["test", "train", "test", "train"]),
-    "F": "foo",
-})
-df.dtypes
-
-df.head()
-df.tail(3)
-df.index
-df.columns
-df.to_numpy()   # np.array([...])
-df.describe()
-df.T            # transpose
-df.sort_index(axis=1, ascending=False)    # columns in decreasing order: 'D', 'C', 'B', 'A'
-df.sort_values(by="B")
-
-# selection
-df["A"]
-df[0:3]
-df["20240101":"20240103"]
-df.loc[dates[0]]
-df.loc[:, ["A","B"]]
-
-df.iloc[3]
-df.iloc[3:5, 0:2]
-
-df[df["A"] > 0]
-df[df > 0]
-df2 = df.copy()
-```
+## Glossary
+- dunder (double underscore) / magic methods / object protocols --
+- generator
+- hash
+- dataclasses / attrs
+- `self.__class__`, `self.__class__.__name__`, `self.__class__.__qualname__`
+- `hex(id(obj1))`
+- key for `dict` should be 1) hashable 2) immutable 3) have equality
+- pseudo private variable, defined with _ in a class
+- Use `dataclass(frozen=True)` for making it immutable, for a dict key
