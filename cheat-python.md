@@ -139,8 +139,8 @@ indata = d.decompress(indata)
 ## Write to gzip file
 ```python
 import gzip
-outf = gzip.GzipFile(filename, 'wb')
-outf.write('bla bla')
+outf = gzip.GzipFile(filename, 'wb')            | with gzip.open(filename, 'wb') as outf:
+outf.write('bla bla')                           |   outf.write('bla bla')
 ```
 
 ## python msgpack unpack
@@ -172,6 +172,24 @@ print(dt)
 
 ## current local time string, now
 time.asctime(time.localtime(time.time()))
+```
+
+### performance - measuring time
+
+```python
+import time
+
+start = time.perf_counter()         # seconds, with highest clock precision
+...
+end = time.perf_counter()
+elapsed_secs = end-start
+
+
+start = time.perf_counter_ns()      # better, int, no precision lost due to float conversion
+...
+end = time.perf_counter_ns()
+elapsed_nanosecs = end-start
+
 ```
 
 ## python unittests
@@ -232,16 +250,21 @@ w.msg = "hi"    # setter
 ```
 
 ## python logging
+
+### simple logging
 ```python
 import logging
 # level = { NOTSET, DEBUG, INFO, WARN, ERROR, CRITICAL }
 logging.basicConfig(filename=LOG_FILENAME,
                     level=logging.DEBUG,
+                    format='[%(levelname)s] %(asctime)s - %(message)s'
                     )
 logging.debug('This message should go to the log file')
+logging.info(...)
+logging.error(...)
 ```
 
-Diagram
+### logging diagram
 
 ```mermaid
 classDiagram
@@ -671,4 +694,34 @@ BOOST_PYTHON_MODULE(mymodule)
 - Do not use equality for `None, True, False`, instead use `is None, is True, is False`
 - Do not check `if bool(x) or len(x) != 0:`, equivalent to `if x`
 - Do not use `for i in range(len(l)): l[i]`, instead `for v in l:`, if you need index too, `for i, v in enumerate(l):`. To sync between 2 lists use zip, `for a, b in zip(m, n):`
-- Do not use dictionary keys method for looping, `for k in d.keys():`, instead use `for k in d:`
+- Do not use dictionary keys method for looping, `for k in d.keys():`, instead use `for k in d:`. if you need both key, value, then use `for k, v in d.items():`
+- Do not unpack tuple items individually with index, use tuple-unpacking `x, y = point`. can also swap `x, y = y, x` with unpacking
+- Do not run commands with subprocess with `shell=True` like `subprocess.run(["ls -l"], capture_output=True, shell=True)`, lots of security loop holes. Use `subprocess.run(["ls", "-l"], capture_output=True)`
+- Do not loop over lists to do simple math,  like `x=list(range(100)); y=list(range(100)); s = [a+b for a,b in zip(x,y)]` use numpy, pandas `x = np.arange(100); y = np.arange(100); s = x+y`
+
+## Do these
+
+- Round numbers with format specfier `v=1.23456; print(f'{v:.2f}')`, do not round it manually with `round(v, 2)`
+- Use pathlib to manipulate path. `import pathlib; x=pathlib.Path(...)`
+  - `x.with_suffix('.txt')`
+  - `x.parent`
+  - `x.with_name('something.txt')`
+  - `x.parent.joinpath('subdir1', 'subdir2')`
+  - prefer `pathlib` instead of `os.path`
+- file io, pass `fp: typing.TextIO` to a function
+  ```python
+  def do_file_io(fp: typing.TextIO):
+    fp.read(...)
+
+  with open(filepath, "rt") as fp:          | with gzip.open(filepath, "rt") as fp:
+    do_file_io(fp)                          |    do_file_io(fp)
+  ```
+- concat strings
+  - `s += f"some string {i}"`
+  - `ss = io.StringIO(); ss.write(f"some string {i}"); s = ss.getvalue()`
+  - `l = []; l.append(f"some string {i}"); s = "".join(l);`
+
+
+https://github.com/mCodingLLC/VideosSampleCode
+https://github.com/fbaptiste/python-blog
+
