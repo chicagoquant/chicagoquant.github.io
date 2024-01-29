@@ -413,6 +413,48 @@ shortcut.TargetPath = path_to_the_target_file
 shortcut.Save()
 ```
 
+# Async
+
+```python
+import asyncio
+
+async def do_work1():
+    await asyncio.sleep(4)
+    return "work1 done"
+
+async def do_work2():
+    await asyncio.sleep(5)
+    return "work2 done"
+
+async def main():
+    # ...
+    tasks = asyncio.gather(do_work1(), do_work2())
+    result1, result2 = await tasks
+    assert result1 == "work1 done"
+    assert result2 == "work2 done"
+
+    ## alternatively
+    task1 = asyncio.create_task(do_work1())
+    task2 = asyncio.create_task(do_work2())
+    result1 = await task1
+    result2 = await task2
+
+    ## alternatively
+    tasks = [ do_work1(), do_work2() ]
+    done, pending = await asyncio.wait(tasks)
+    for task in done:
+        result = task.result()
+
+    ## alternatively
+    async with asyncio.TaskGroup() as grp:
+        tasks = [ grp.create_task(do_work1()), grp.create_task(do_work2()) ]
+        # automatically ensures tasks are awaited
+
+
+if __name__ == "__main__":
+    asyncio.run(main(), debug=True)
+```
+
 # Beautiful Soup
 
 ## Web requests
@@ -721,7 +763,9 @@ BOOST_PYTHON_MODULE(mymodule)
   - `ss = io.StringIO(); ss.write(f"some string {i}"); s = ss.getvalue()`
   - `l = []; l.append(f"some string {i}"); s = "".join(l);`
 
-
+https://www.youtube.com/@mCoding
 https://github.com/mCodingLLC/VideosSampleCode
+
+https://www.youtube.com/@mathbyteacademy/videos
 https://github.com/fbaptiste/python-blog
 
