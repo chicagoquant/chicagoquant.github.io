@@ -1,6 +1,6 @@
 ## Some useless stuff
 
-- [garage](https://github.com/chicagoquant/garage)
+- [garage](https://github.com/chicagoquant/chicagoquant.github.io)
 
 ## Kafka
 
