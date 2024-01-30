@@ -217,15 +217,15 @@ if __name__ == '__main__':
 class World:
     def __init__(self, msg):
         self._msg = msg
-    
+
     @property
     def msg(self):
         return self._msg
-    
+
     @msg.setter
     def msg(self, value):
         self._msg = value
-    
+
 
 w = World("hello")
 print(w.msg)    # getter
@@ -453,6 +453,93 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main(), debug=True)
+```
+
+## Async main
+
+```python
+
+async def async_main():
+	db = await aioredis.create_redis_pool(url)
+	db = await aioredis.from_url(url[, decode_responses=True])
+
+	keys = await db.keys('*')
+	s = await db.get(key)
+
+	results = await asyncio.gather(async_func1(), async_func2(), ...)
+
+	await asyncio.wait_for(async_func1(), timeout=secs)
+	# throws asyncio.TimeoutError exception
+
+	await asyncio.sleep(secs)
+
+asyncio.run( async_main() )
+# note: verbose diagnostic messages
+asyncio.run( async_main(), debug=True )
+```
+
+## Blocking/CPU bound function
+Do not call it on event loop
+
+```python
+def blocking_func():
+	time.sleep(1000)  # blocking
+
+def cpu_bound():
+	return sum([ i*i for i in range(1, 10_000_000)])
+
+await asyncio.gather(
+	asyncio.to_thread( blocking_func )
+	asyncio.to_thread( cpu_bound )
+	asyncio.nonblocking_coro()
+)
+```
+
+```python
+loop = asyncio.get_running_loop()
+loop.run_in_executor(
+	pool=None, # use the default executor
+	blocking_io
+)
+
+with concurrent.futures.ThreadPoolExecutor() as pool:
+	loop.run_in_executor(
+		pool,
+		blocking_io
+	)
+
+with concurrent.futures.ProcessPoolExecutor() as pool
+	loop.run_in_executor(
+		pool,
+		cpu_bound
+	)
+```
+
+## Event loop
+```python
+loop = asyncio.get_event_loop()
+```
+
+## Random numbers
+```python
+random.seed(number)
+random.randint(b, e)
+random.randuniform(b, e)
+
+with open('/dev/urandom', 'rb') as f:
+	f.read(100)
+
+```
+
+## Logging, debug
+```python
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+asyncio.run( coro(), debug=True )
+```
+
+## virtualenv for async
+```shell
+conda create -n my-async-env python=3.10 pandas=1.4.3 aioredis=2.0.1 fastapi uvicorn
 ```
 
 # Beautiful Soup
