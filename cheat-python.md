@@ -743,49 +743,49 @@ BOOST_PYTHON_MODULE(mymodule)
 
 struct Foo
 {
-    int32_t myint;
+  int32_t myint;
 };
 
 BOOST_PYTHON_MODULE(mymodule)
 {
-    class_<Foo>("Foo", init<>())
-        .def_readwrite("myint", &Foo::myint)
-        ;
-    CHECKED_MAP_INDEXING_SUITE(uint64_t, Foo)
+  class_<Foo>("Foo", init<>())
+    .def_readwrite("myint", &Foo::myint)
+    ;
+  CHECKED_MAP_INDEXING_SUITE(uint64_t, Foo)
 }
 
-#### GETTERS_SETTERS_DEF(), FIXED_GETTERS_SETTERS_IMPL(), NSTRING_GETTERS_SETTERS_IMPL()
+#### GETTERS_SETTERS_DEF(), GETTERS_SETTERS_IMPL()
 
 struct Foo
 {
-    core::Fixed<23, 9> px;
-    core::n_string<40> symbol;
+  int64_t px;
+  string symbol;
 };
 
-FIXED_GETTERS_SETTERS_IMPL(Foo, px)
-NSTRING_GETTERS_SETTERS_IMPL(Foo, symbol)
+GETTERS_SETTERS_IMPL(Foo, px)
+GETTERS_SETTERS_IMPL(Foo, symbol)
 
 BOOST_PYTHON_MODULE(mymodule)
 {
-    class_<Foo>("Foo", init<>())
-        GETTERS_SETTERS_DEF(px)
-        GETTERS_SETTERS_DEF(symbol)
-        ;
+  class_<Foo>("Foo", init<>())
+    GETTERS_SETTERS_DEF(px)
+    GETTERS_SETTERS_DEF(symbol)
+    ;
 }
 
 #### COMPARISON_DEFS
 
 class Foo
 {
-    //...
+  //...
 };
 
 BOOST_PYTHON_MODULE(mymodule)
 {
-    class_<Foo>("Foo", init<>())
-        //...
-        COMPARISON_DEFS()
-        ;
+  class_<Foo>("Foo", init<>())
+    //...
+    COMPARISON_DEFS()
+    ;
 }
 
 #### EXPORT_STATIC_VAR
@@ -794,7 +794,7 @@ BOOST_PYTHON_MODULE(mymodule)
 
 BOOST_PYTHON_MODULE(mymodule)
 {
-    EXPORT_STATIC_VAR(int64_t, MYVAR)
+  EXPORT_STATIC_VAR(int64_t, MYVAR)
 }
 ```
 
