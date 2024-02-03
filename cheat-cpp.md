@@ -2021,6 +2021,31 @@ constexpr auto constant = val;            |  constexpr T constant = val;
 int age = constant<50>;                   |  int age = constant<int, 50>;
 ```
 
+## Variadic arguments
+
+```cpp
+#include <cstdarg>
+
+void foo(int count, ...)
+{
+  int result = 0;
+  std::va_list args;
+  va_start(args, count);     // enable access to the variable arguments
+  for (int i = 0; i < count; ++i) {
+    result += va_arg(args, int);    // get next variable arg, of type T=int
+  }
+  va_end(args);
+  return result;
+}
+
+auto n = foo(3, 5, 10, 11);
+// n == 26 = 5+10+11
+
+// macro with variadic arguments
+#define FOO(count, ...) foo(count, __VA_ARGS__)
+#define CHECK1(x, count, ...) if ((x)) { foo(count, __VA_ARGS__); }
+```
+
 ## Concepts
 
 A _named set of requirements_ is `Concept`
