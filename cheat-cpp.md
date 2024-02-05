@@ -2567,6 +2567,8 @@ while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_re
 
 Scott Meyers singleton, guaranteed thread safe by compiler. Fastest, easiest, best option
 
+https://laristra.github.io/flecsi/src/developer-guide/patterns/meyers_singleton.html
+
 ```cpp
 class Singleton       // Scott Meyer's singleton
 {
