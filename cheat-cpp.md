@@ -351,22 +351,22 @@ public:
   }
 
   A& operator=(const A& a) {
-    if (&x != &y) {
-      WriteLock lhs_lk(x.mut_, defer_lock);
-      ReadLock rhs_lk(y.mut_, defer_lock);
+    if (this != &a) {
+      WriteLock lhs_lk(mut_, defer_lock);
+      ReadLock rhs_lk(a.mut_, defer_lock);
       lock(lhs_lk, rhs_lk);
-      x.field1_ = y.field1_;
-      x.field2_ = y.field2_;
+      field1_ = a.field1_;
+      field2_ = a.field2_;
     }
   }
 
   A& operator=(A&& a) {
-    if (&x != &y) {
-      WriteLock lhs_lk(x.mut_, defer_lock);
-      WriteLock rhs_lk(y.mut_, defer_lock);
+    if (this != &a) {
+      WriteLock lhs_lk(mut_, defer_lock);
+      WriteLock rhs_lk(a.mut_, defer_lock);
       lock(lhs_lk, rhs_lk);
-      x.field1_ = move(y.field1_);
-      x.field2_ = move(y.field2_);
+      field1_ = move(a.field1_);
+      field2_ = move(a.field2_);
     }
   }
 
@@ -591,6 +591,8 @@ v = (a.*memfp)(x, y);
 #include <iomanip>
 #include <ranges>
 #include <string>
+
+namespace rv = std::ranges::views;   // same as std::views
 
 const char* csv_data = R"(field1,field2,field3
 10,40,"hello world"
