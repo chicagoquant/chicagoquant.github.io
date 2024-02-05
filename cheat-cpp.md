@@ -1009,8 +1009,43 @@ get<float>(v); // throws bad_variant_access, stored int above
 
 holds_alternative<int>(v) == true;
 
-visit( [](auto&& val) { cout << val; }, v );
+using var_t = variant<int, long, double, string>;
+using varvec_t = vector<var_t>;
+varvec_t vv;
+// invoke a lambda on many variant values
+std::visit( [](auto&& val) { cout << val; }, vv[0], vv[1], vv[2], vv[3] );
+for (auto& v : vv) {
+  // option 1
+  auto invoke = [](auto&& arg) { cout << arg; };            // side-effect only
+  // option 2
+  auto invoke = [](auto&& arg) -> var_t { return arg+arg; };// returns another variant
+  // option 3
+  auto invoke = [](auto&& arg) {                            // each type different
+    using T = decay_t<decltype(arg)>;
+    if constexpr (is_same<T, int>) { cout << "int with val " << arg; }
+    else if constexpr (is_same<T, long>) { cout << "long with val " << arg; }
+    else if constexpr (is_same<T, double>) { cout << "double with val " << arg; }
+    else if constexpr (is_same<T, string>) { cout << "string with val " << arg; }
+    else { static_assert( always_false_v<T>, "invalid visitor" ); }
+  };
+  // option 4
+  // see https://www.cppstories.com/2019/02/2lines3featuresoverload.html/
+  template<class... Ts>
+  struct overloaded : Ts... { using Ts::operator()...; };
 
+  auto invoke = overloaded {
+    [](auto arg) { cout << "int/long " << arg; },
+    [](double i) { cout << "double" << i; },
+    [](string s) { cout << "string" << s; },
+  };
+  // means overloaded<lambda1, lambda2, lambda3> : lambda1, lambda2, lambda3 {
+  //   using lambda1::operator();
+  //   using lambda2::operator();
+  //   using lambda3::operator();
+  // }
+
+  std::visit(invoke , v);
+}
 // https://github.com/mpark/variant
 // https://github.com/groundswellaudio/swl-variant
 ```
@@ -1047,6 +1082,8 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// to compute index of type T1 in Ts...
+// used to initialize active_idx, data above in Variant::ctor
 template<typename T1, typename ...Ts>
 struct PackIndex;
 
@@ -1536,7 +1573,25 @@ for (auto& f : arr) {
 }
 ```
 
-### lambda expanded
+### lambda explained
+
+lambda definition
+```cpp
+[capture](param_list) mutable exception_spec -> trailing_return_type { lambda_body }
+
+[=]() mutable throw() -> int { ... return 100; }
+
+[] - empty capture clause - accesses no variables in the enclosing scope
+[&] -  all variables captured by reference
+[=] - captured by value
+[&a, b] - a by reference, b by value
+[&, b] - all by reference, but b by value
+[=, &a] - all by value, except a by reference
+[newVar = captureVar] - introduce and initialize new variables (generalized captures)
+[newVar = move(captureVar)] - can be an expression in capture
+```
+
+lambda expanded
 ```cpp
 int x, y;
 auto f = [&x, y](double a, double b) { return (a+b+x+y); };
@@ -1554,7 +1609,7 @@ public:
   double operator()(double a, double b) const              // const callable, unless mutable lambda
   { return a+b+x+y; }
 
-  // oh i get it now, this is so that it can be implicitly
+  // oh i get it now, this is so that it can be implicitly converted to std::function
   // not really necessary, this is getting generated when I assign lambda to a std::function
   using retType = double (*)(double, double);
   constexpr operator retType() const noexcept { return invoke; }
@@ -1594,7 +1649,7 @@ More examples:
 [](int i) { return i*i; }
     // lambda expressions with empty closure can be used as function pointers
     // void foo(int (*)(int) f); foo([](int i) {return i*i; });
-auto* fptr = +[](int i) { return i*i; };          // idiom: unary plus operator trick
+auto* fptr = +[](int i) { return i*i; };          // idiom: unary plus operator trick, to get a func ptr, not lambda object
 { int i, j = 0; auto f = [=] { return i==j; }}    // capture by value, =
     // only capture local variables, can not capture global/static variables
 { int i, j = 0; auto f = [&] { return i==j; }}    // capture by reference, &
@@ -1644,7 +1699,7 @@ X x1, x2, x3;                                     // called only once
 };
 
 // variadic templates
-[](auto&&.. args) {
+[](auto&&... args) {
   (cout << ... << args);                          // fold expression
 } (123, "hello", 'a', 4.0);
 
