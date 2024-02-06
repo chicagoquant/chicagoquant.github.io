@@ -305,7 +305,7 @@ Consumer
 - Loop checking the cursor, currently available sequence in the ring buffer. With/without thread yield (no contention)
 
 Lock free MPMC queues - require multiple CAS operations on the Head, Tail, and Size counters
-	
+
 Sequence
 - NextAvailableSlotSequence, Producer claim the next slot sequence before writing to the ring
   * Simple counter (SP)
@@ -332,7 +332,7 @@ Classes
 - ClaimStrategy
   * SingleThreadedClaimStrategy
   * MultiThreadedClaimStrategy
-	
+
 LMAX - London Multi-Asset Exchange
 - Betfair spinoff, betting, gambling
 - Extreme Transaction Processing (XTP)
@@ -383,4 +383,191 @@ ClaimStrategy <|-- SingleThreadedClaimStrategy
 ClaimStrategy <|-- MultiThreadedClaimStrategy
 ```
 
+## Ring Buffer
+
+This condition will not happen if writer does not care if the reader is slow and may loose data
+
+```cpp
+constexpr int CACHELINE_SIZE 64
+
+// problem: lots of cache coherence evictions // cache coherency traffic
+struct RingBufferNotFast {
+  std::vector<int> slots;
+
+  alignas(CACHELINE_SIZE) atomic<size_t> head {0};      // index, read from here
+  alignas(CACHELINE_SIZE) atomic<size_t> tail {0};      // index, write over here
+
+  RingBufferNotFast(size_t capacity) : slots(capacity, 0) {}
+};
+
+// buffer empty : head == tail
+// buffer full : head == tail+1
+
+bool send(int val) {
+  auto const writeHere = tail.load(memory_order_relaxed);
+  auto emptyMarker = writeHere+1;
+  if (emptyMarker == slots.size()) { emptyMarker = 0; }
+
+  // L1 cache of Sender CPU will load 'head', so it is shared state, when Reader thread updates 'head',
+  // value of 'head' in our L1 becomes stale, cacheline gets evicted to get updated value, this will be a cache miss
+  if (emptyMarker == head.load(memory_order_acquire)) { // acquire : don't want later instructions to execute before this barrier
+    // buffer is full, head == (tail + 1)
+    return false;
+  }
+
+  slot[writeHere] = val;
+  tail.store(emptyMarker, memory_order_release); // release : don't let earlier instructions execute after this barrier
+  // note: reader has also read 'tail', so when we update tail in this thread,
+  // have to flush 'tail' cache line, (counted as cache miss)
+  return true;
+}
+
+bool recv(int& val) {
+  auto const readHere = head.load(memory_order_relaxed);
+  // tail read here, when sender writes to it, we have to update the new value, cache miss
+  if (readHere == tail.load(memory_order_acquire)) {  // acquire: later instructions should not execute before this barrier
+    // buffer is empty, head == tail
+    return false;
+  }
+  val = slots[readHere];
+  auto nextReadHere = readHere+1;
+  if (nextReadHere == slots.size()) { nextReadHere = 0; }
+  // reader thread loaded 'head', we are writing to it, so cacheline has to flush
+  head.store(nextReadHere, memory_order_release);   // release: earlier instructions do not execute after this barrier
+  return true;
+}
+```
+
+```cpp
+constexpr int CACHELINE_SIZE 64
+
+// less cache coherence evictions
+struct RingBufferFaster {
+  std::vector<int> slots;
+
+  alignas(CACHELINE_SIZE) atomic<size_t> head {0};      // index, read from here
+  alignas(CACHELINE_SIZE)        size_t  tailCached {0};
+
+  alignas(CACHELINE_SIZE) atomic<size_t> tail {0};      // index, write over here
+  alignas(CACHELINE_SIZE)        size_t  headCached {0};
+
+  RingBufferFaster(size_t capacity) : slots(capacity, 0) {}
+};
+
+// buffer empty : head == tail
+// buffer full : head == tail+1
+
+bool send(int val) {
+  auto const writeHere = tail.load(memory_order_relaxed);
+  auto emptyMarker = writeHere+1;
+  if (emptyMarker == slots.size()) { emptyMarker = 0; }
+
+  // reduces the number of times we have to load, if there are N items pending, then it will load only once
+  // cuts the number of cache misses by a lot
+  if (headCached == emptyMarker) {
+    headCached = head.load(memory_order_acquire);
+    if (emptyMarker == headCached) {
+      // buffer is full, head == (tail + 1)
+      return false;
+    }
+  }
+
+  slot[writeHere] = val;
+  tail.store(emptyMarker, memory_order_release); // release : don't let earlier instructions execute after this barrier
+  // note: reader has also read 'tail', so when we update tail in this thread,
+  // have to flush 'tail' cache line, (counted as cache miss)
+  return true;
+}
+
+bool recv(int& val) {
+  auto const readHere = head.load(memory_order_relaxed);
+  if (tailCached == readHere) {
+    tailCached = tail.load(memory_order_acquire);
+    if (tailCached == readHere) {
+      // buffer is empty, head == tail
+      return false;
+    }
+  }
+
+  val = slots[readHere];
+  auto nextReadHere = readHere+1;
+  if (nextReadHere == slots.size()) { nextReadHere = 0; }
+  // reader thread loaded 'head', we are writing to it, so cacheline has to flush
+  head.store(nextReadHere, memory_order_release);   // release: earlier instructions do not execute after this barrier
+  return true;
+}
+// source: https://rigtorp.se/ringbuffer/
+// source: https://github.com/rigtorp/SPSCQueue/blob/master/include/rigtorp/SPSCQueue.h
+```
+
 ## Aeron Messaging
+
+TBD
+
+# Networking
+
+## Server Client
+```
+        SERVER                                  |       CLIENT
+socket(AF_INET, SOCK_STREAM, 0) -> sock         | socket(AF_INET, SOCK_STREAM, 0 -> sock
+bind(sock, sockaddr_in{AF_INET, *, 80 }, len)   |
+listen(sock, queue_len=1)                       |
+accept(sock, 0, 0) -> fd                        |
+                                                | connect(sock, sockaddr_in{AF_INET, srvr_ip, srvr_port}, len)
+    read(fd, buf, buflen)                       | send(sock, buf, buflen)
+    send(fd, buf, buflen)                       | read(sock, buf, buflen)
+    close(fd)                                   | close(sock)
+                                                |
+close(sock)                                     |
+```
+
+## IO Multiplexing - select poll epoll
+
+```
+fd_set fdset;
+fd_set* readfdset = &fdset;
+
+FD_ZERO(readfdset);
+FD_SET(fd, readfdset);
+select(maxfd, readfdset, writefdset, exceptfdset, timeout)
+if (FD_ISSET(fd, readfdset))
+{
+    read(fd, buf, buflen);
+}
+----------------------------------------------------------------------------------
+
+pollfd fds[] { {fd,  POLLIN, 0 }, };
+n = poll(fds, numfds, timeout);
+for (i : [0, numfds)) {
+    if (fds[i].revents & POLLIN) {
+        fds[i].revents = 0;
+        read(fds[i].fd, buf, buflen);
+    }
+}
+
+----------------------------------------------------------------------------------
+epfd = epoll_create(ignored);
+epoll_event ev {
+    data: {fd,},
+    events: EPOLLIN
+    };
+epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev);
+
+epoll_event events[N];
+n = epoll_wait(epfd, events, N, timeout)
+for (i : [0, n)) {
+    read(events[i].data.fd, buf, buflen);
+}
+close(epfd)
+```
+
+epoll - used by libuv, libev, gevent
+
+### New Technologies
+io\_uring -  async interface to kernel, less system calls, same API for file i/o and network i/o
+  - submission queue - send request to kernel
+  - completion queue - results back to user space
+
+eBPF - filters and hooks on network traffic that can execute snippets in kernel space
+  - extended berkeley packet filter
+  - eXpress Data Path (XDP) - high performance data path bypassing kernel network stack

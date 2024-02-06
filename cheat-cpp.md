@@ -774,6 +774,46 @@ namespace std {
 
 See: [C++ on Sea 2020 - S/B uncovered](https://youtu.be/uZCvz-E1heA?t=1592)
 
+### tuple
+
+- fixed size collection, different types possible
+
+```cpp
+tuple tp { 10, 20l, 3.14, 42, "hello" }; // deduced type tuple<int, long, double, int, const char*>
+get<0>(tp)        // 0th item is 10
+get<double>(tp)   // ok, only 1 double
+get<int>(tp)      // error, ambiguous
+
+apply(callable, tp);    // callable(get<0>(tp), get<1>(tp), ...)
+apply(callable, array); // can apply on anything tuple-like, that supports get<I>(), tuple_size(), eg: array, pair
+
+struct Foo {
+  Foo(int a, float b, int c) { ... }
+};
+auto tp1 = make_tuple(42, 3.14f, 1);
+auto foo = make_from_tuple<Foo>(move(tp1));
+```
+
+printing all the fields of tuple
+
+```cpp
+template<typename... Ts>
+ostream& operator<<(ostream& os, tuple<Ts...> const& tp) {
+  auto lambda = [&os](Ts const&... tp) {
+    os << '[';
+    size_t n {0};
+    (
+      (os << tp << (++n != sizeof...(Ts) ? ", " : ""))
+      , ...
+    );
+    os << ']';
+  };
+  apply(lambda, tp);
+  return os;
+}
+```
+
+
 ### Swap
 
 3 ways to define swap:
@@ -876,6 +916,20 @@ std::pmr::vector<int> v(&alloc); // not usual vector
 
 ### Smart Pointers
 
+- `shared_ptr` is half thread-safe
+  - reference counting increment/decrement is atomic
+  - referenced object is deleted safely only on one thread
+  - i.e. control block is protected for thread safety
+  - referenced object is not protected, if you update the object from different threads, you are responsible for thread-safety
+  - calling non-const methods on `shared_ptr` from different threads is not thread-safe
+    - example:
+      ```cpp
+      shared_ptr<T> t1 = make_shared<T>(...);
+      // thread 1                           | thread 2
+      t1 = make_shared<T>(...)              | t1 = make_shared<T>(...)        // not safe
+      ```
+  - C++20: use `atomic<shared_ptr<T>>` for thread safe updateable shared ptr
+
 ```cpp
 shared_ptr<A>       // reference counted raw pointer
 weak_ptr<A>         // does not change reference count
@@ -893,8 +947,59 @@ assert(sp.use_count() == 2);    // use_count() gives ref_count
 sp->foo();
 
 auto wp = weak_ptr(sp);
-shared_ptr<A> = wp.lock();  // convert weak into shared
+shared_ptr<A> sp3 = wp.lock();  // convert weak into shared
+
+wp.expired()         // underlying shared-ptr deleted?
+wp.use_count()
+
+atomic<shared_ptr<T>> sp;   // for using mutable methods of sp across threads
+atomic<weak_ptr<T>> wp;
 ```
+
+Example implementation
+
+```cpp
+
+template<typename T>
+class SharedPtr
+{
+  T* ptr;
+  uint32_t* ref_count;
+public:
+  SharedPtr() : ptr(nullptr), ref_count(nullptr) {}
+  SharedPtr(T* ptr) : ptr(ptr), ref_count(new uint32_t{1}) {}
+  ~SharedPtr() { cleanup(); }
+
+  SharedPtr(const SharedPtr& o) : ptr(o.ptr), ref_count(o.ref_count) { if (ptr != nullptr) ++(*ref_count); }
+  SharedPtr& operator=(const SharedPtr& o) {
+    if (this != &o) {
+      cleanup();
+      ptr = o.ptr;
+      ref_count = o.ref_count;
+      if (ptr != nullptr) {
+        ++(*ref_count);
+      }
+    }
+  }
+
+  // TODO: move construction, assignment operator
+
+  ...
+
+private:
+  void cleanup() {
+    if (*ref_count > 0) {
+      --(*ref_count);
+      if (*ref_count == 0)
+      {
+        delete ptr;
+        delete ref_count;
+      }
+    }
+  }
+};
+```
+
 
 ### enable if
 
@@ -950,6 +1055,11 @@ void foobar(T t)
 ### any, variant, optional
 
 #### Usage - any (type-safe void*)
+
+- does memory allocation on heap, heap allocation may be avoided for small objects
+- `make_any<T>(t)`, `any_cast<T>`, exception `bad_any_cast`
+- `has_value()`, `type()`, `emplace()`, `reset()`
+
 ```cpp
 #include <any>
 any a = 1;
@@ -1000,12 +1110,20 @@ struct any
 ```
 
 #### Usage - variant (type-safe union)
+
+- not allowed to allocate additional memory dynamically on heap
+- can not stre references, arrays or void
+- all the types must be specified in template parameters
+- use `std::monostate` as first argument if first argument is not default constructible type
+- `index()`, `visit()`, `get<T>()`, `variant_size<V>::value == variant_size_v<V>`, `variant_alternative<V>::type == variant_alternative_t<V>`
+
 ```cpp
 variant< int, float > v;
 v = 41;
 int i = get<int>(v);
 int i = get<0>(v);
 get<float>(v); // throws bad_variant_access, stored int above
+v.index() == 1        // active type's index, 0-based
 
 holds_alternative<int>(v) == true;
 
@@ -1033,7 +1151,7 @@ for (auto& v : vv) {
   template<class... Ts>
   struct overloaded : Ts... { using Ts::operator()...; };
 
-  auto invoke = overloaded {
+  auto invoke = overloaded {                 // polymorphic lambda overload technique
     [](auto arg) { cout << "int/long " << arg; },
     [](double i) { cout << "double" << i; },
     [](string s) { cout << "string" << s; },
@@ -1536,7 +1654,8 @@ span<int> sp { begin(vec), 3 };   // count=3
 
 ### std function
 
-`std::function` is a polymorphic callable wrapper, is implemented using type-erasure idiom.
+- `std::function` is a polymorphic callable wrapper, is implemented using type-erasure idiom.
+- note: it will make a virtual function call
 
 ```cpp
 #include <iostream>
