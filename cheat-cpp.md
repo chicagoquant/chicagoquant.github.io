@@ -2794,6 +2794,35 @@ void doWork() {
 }
 ```
 
+### concurrent queue using std list
+
+Source: Sean Parent - No Raw Synchronization Primitives
+
+```cpp
+template<typename T>
+class concurrent_queue
+{
+  mutex mutex_;
+  list<T> q_;
+public:
+  void enqueue(T x) {
+    list<T> tmp;
+    tmp.push_back(move(x));
+    {
+      lock_guard<mutex> lock(mutex):
+      q_.splice(end(q_), tmp);
+    }
+  }
+};
+```
+
+### Packaged Tasks
+
+```cpp
+packaged_task<f, args> p;
+```
+
+
 ## Thread-safe Singleton, Double checked locking
 
 Scott Meyers singleton, guaranteed thread safe by compiler. Fastest, easiest, best option
@@ -3750,6 +3779,26 @@ void draw(document_t& d, ostream& out, size_t pos)
 
 ```
 
+### Sean Parent Seasoning
+
+Slide using rotate
+```cpp
+pair<I, I> slide(I f, I l, I p)
+{
+    if (p < f) return { p, rotate(p, f, l) };
+    if (l < p) return { rotate(f, l, p), p };
+    return { f, l };
+}
+```
+
+Gather using stable partition
+```cpp
+pair<I, I> gather(I f, I l, I p, S s)
+{
+    return { stable_partition(f, p, not1(s)),
+                stable_partition(p, l, s) };
+}
+```
 
 ## Tools of trade
 - Google benchmark, catch2, nanobenchmark
@@ -3858,3 +3907,38 @@ Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 
 - Ref: Rocket Lake, 11th Gen Intel Core i7 11700 @ 2.5GHz, Cores 8, Threads 16, 32 GB, L1 32KB, L2 2MB, L3 6MB, PCIe 4
 - Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
+
+
+# Mindmap
+
+```mermaid
+mindmap
+C++
+  Seasoning - Sean Parent
+    No Raw Loops
+      slide using rotate
+      gather using stable_partition
+    Use ranges library
+      find a, x
+      sort a, less, employee_last
+      lower_bound
+    Range based for loops
+    No raw synchronization primitives
+      Raw primitives - mutex, atomic, semaphore, memory fence
+      Task
+      Libraries
+        std async C++14
+        Intel TBB
+        Windows Thread Pool, PPL
+        Apple - Grand Central Dispatch libdispatch
+      packaged_task, future
+      concurrent queue with std list
+      buzz words
+        dependent tasks
+        serialized queues, groups
+        chained tasks
+        flow graphs
+        joins
+    No raw pointers
+  Data Oriented Design - Mike Acton
+```
