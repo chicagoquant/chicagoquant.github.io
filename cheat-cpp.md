@@ -2739,6 +2739,61 @@ while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_re
 {}
 ```
 
+## Multithreading synchronization primitives
+
+### Condition variables
+
+```cpp
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
+std::condition_variable cond_var;
+std::mutex mut;                       // mutex for cond_var
+bool data_ready { false };            // flag used by cond_var
+
+void waitForWork() {
+  auto condition_to_check = []() { return data_ready; }
+  unique_lock<mutex> lk(mut);
+  cond_var.wait(lk, condition_to_check);
+  // blocked until data_ready is true
+  ... do the work ...
+  // mutex is locked at this point
+  data_ready = false;
+}
+
+void setDataReady() {
+  {
+    lock_guard<mutex> lk(mut);  // to protect the flag
+    data_ready = true;          // set the flag
+  }
+  cond_var.notify_one();        // tell threads waiting on the condition that flag was updated
+}
+```
+
+### Semaphore
+
+- thread blocks if semaphore is 0
+
+```cpp
+#include <semaphore>
+#include <thread>
+
+std::counting_semaphore<1> sem(0);   // semaphore max count = 1, current value = 0
+
+void dataIsReady() {
+  ... prepare data ...
+  sem.release();                    // increment the semaphore
+}
+
+void doWork() {
+  ... wait for work to be ready ...
+  sem.acquire();                    // decrement the semaphore, blocked if sem = 0
+  // unblocked, and semaphore goes down to 0
+  ... do the work ...
+}
+```
+
 ## Thread-safe Singleton, Double checked locking
 
 Scott Meyers singleton, guaranteed thread safe by compiler. Fastest, easiest, best option
