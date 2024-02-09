@@ -2739,7 +2739,7 @@ while (!count.compare_and_swap_strong(count_copy, count_copy*10, memory_order_re
 {}
 ```
 
-## Multithreading synchronization primitives
+## Raw synchronization primitives
 
 ### Condition variables
 
@@ -2816,10 +2816,64 @@ public:
 };
 ```
 
+### Promise Future
+```cpp
+#include <future>
+
+promise<int> p;
+future<int> fut = p.get_future();
+
+p.set_value(99);
+p.set_value_at_thread_exit(99);
+fut.wait();
+int result = fut.get(); // 99
+
+
+try {
+  ... some exception is throw ...
+}
+catch (...) {
+  p.set_exception(current_exception());
+  // well p.set_exception can itself throw too,
+  // so ideally wrap the above line inside a try-catch
+}
+
+
+try {
+  fut.get(); // in case an exception was forwarded by promise, then this will throw the exception. so catch it
+}
+catch (const exception& e) {
+  ...
+}
+
+```
+
 ### Packaged Tasks
 
 ```cpp
-packaged_task<f, args> p;
+packaged_task<R(T1,T2)> task(fn);
+
+#include <thread>
+#include <future>
+#include <cmath>
+
+int fn(int x, int y) { std::pow(x, y); }
+
+packaged_task<int(int,int)> task(fn);
+
+packaged_task<int(int,int)> task([](int a, int b) {return std::pow(a,b); });
+
+future<int> result = task.get_future();
+
+thread thr(move(task), 2, 10);      // will call task(2, 10)
+
+// or alternatively, can call this without thread
+// task(2, 10);
+
+int power = result.get();           // will block();
+cout << "2^10 = " << power << endl;
+
+thr.join();
 ```
 
 
@@ -3680,8 +3734,9 @@ inline void intrusive_ptr_release(T* expr){
   foo(x->name);
 }
 ```
+## Talks summary
 
-## Sean Parent Undo Idiom
+### Sean Parent Undo Idiom
 - Runtime-Concept Idiom
 - Concept based Polymorphism
 - Concept-Model Idiom
@@ -3800,6 +3855,40 @@ pair<I, I> gather(I f, I l, I p, S s)
 }
 ```
 
+### Mindmap
+
+```mermaid
+mindmap
+C++
+  Seasoning - Sean Parent
+    No Raw Loops
+      slide using rotate
+      gather using stable_partition
+    Use ranges library
+      find a, x
+      sort a, less, employee_last
+      lower_bound
+    Range based for loops
+    No raw synchronization primitives
+      Raw primitives - mutex, atomic, semaphore, memory fence
+      Task
+      Libraries
+        std async C++14
+        Intel TBB
+        Windows Thread Pool, PPL
+        Apple - Grand Central Dispatch libdispatch
+      packaged_task, future
+      concurrent queue with std list
+      buzz words
+        dependent tasks
+        serialized queues, groups
+        chained tasks
+        flow graphs
+        joins
+    No raw pointers
+  Data Oriented Design - Mike Acton
+```
+
 ## Tools of trade
 - Google benchmark, catch2, nanobenchmark
 - Google test, doctest
@@ -3830,6 +3919,8 @@ pair<I, I> gather(I f, I l, I p, S s)
 - NUMA - Non Uniform Memory Architecture - a memory bank is closer to one CPU, memory is not symmetric
 - SIMD instructions -- SSE, AVX
 - RCU Read-Copy-Update synchronization mechanism
+- TLB Translation lookaside buffer - recent translations of virtual memory to physical memory, a miss needs a page table lookup (called page walk). Memory address translation cache
+- Page table - mapping of virtual to physical memory
 
 ## Glossary
 - CPU
@@ -3845,6 +3936,7 @@ pair<I, I> gather(I f, I l, I p, S s)
   - Branchless computing (103)
   - Loop Unrolling
   - Branchless selection
+
 - Memory
   - Column Access Strobe Latency / CAS Latency / CL - num of cycles for RAM to recv + process + return value for a data request (116)
   - cache hierarchy (CPU - L1 - L2 - L3 - RAM)
@@ -3909,36 +4001,3 @@ Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 - Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
 
 
-# Mindmap
-
-```mermaid
-mindmap
-C++
-  Seasoning - Sean Parent
-    No Raw Loops
-      slide using rotate
-      gather using stable_partition
-    Use ranges library
-      find a, x
-      sort a, less, employee_last
-      lower_bound
-    Range based for loops
-    No raw synchronization primitives
-      Raw primitives - mutex, atomic, semaphore, memory fence
-      Task
-      Libraries
-        std async C++14
-        Intel TBB
-        Windows Thread Pool, PPL
-        Apple - Grand Central Dispatch libdispatch
-      packaged_task, future
-      concurrent queue with std list
-      buzz words
-        dependent tasks
-        serialized queues, groups
-        chained tasks
-        flow graphs
-        joins
-    No raw pointers
-  Data Oriented Design - Mike Acton
-```
