@@ -1,6 +1,15 @@
 
 # Topics
 
+<table>
+<tr>
+<td>Hackernoon</td>
+<td>Neetcode</td>
+</tr>
+
+<tr>
+<td style="vertical-align:top">
+
 - Sliding Window
   - Max sum subarray of size K
   - Longest substring with K distinct characters
@@ -27,6 +36,10 @@ Source: https://hackernoon.com/14-patterns-to-ace-any-coding-interview-question-
 
 See: https://seanprashad.com/leetcode-patterns/
 
+</td>
+
+<td style="vertical-align:top">
+
 - Arrays and Hashing
 - Two Pointers
 - Stack
@@ -47,6 +60,10 @@ See: https://seanprashad.com/leetcode-patterns/
 - Math and Geometry
 
 Source: https://neetcode.io/roadmap
+
+</td>
+</tr>
+</table>
 
 # Problems
 
@@ -109,3 +126,226 @@ public:
 };
 ```
 </details>
+
+<details>
+<summary>
+two pointers <a href="https://leetcode.com/problems/trapping-rain-water/">[Trapping rain water]</a>
+</summary>
+
+```cpp
+class Solution {
+public:
+    int trap(vector<int>& height) {
+        int water = 0;
+        int max_h = 0;
+        for (int i = 0, j = height.size()-1; i < j;)
+        {
+            int h = min(height[i], height[j]);
+            if (max_h < h) {
+                max_h = h;
+            }
+            if (height[i] <= height[j]) {
+                water += max_h - height[i];
+                ++i;
+            }
+            else {
+                water += max_h - height[j];
+                --j;
+            }
+        }
+        return water;
+    }
+};
+```
+
+Is keeping `max_h` not sufficient? why do people keep track of `left_max_h` and `right_max_h`.
+</details>
+
+# Concepts
+
+<details>
+<summary>graphs</summary>
+
+graph - vertex, edge
+
+undirected, directed, acyclic, weighted, adjacency
+
+connected, disconnected
+
+graph algorithms
+- search
+- detect a cycle
+- shortest path
+
+binary tree
+- height or levels = `h >= log2(n+1)`
+- tree-nodes = `2**(h+1)-1 = N`
+- leaf-nodes = `2**h = n = (N+1)/2`
+- internal-nodes = `2**h-1 = n-1`
+
+```cpp
+// 0-based indexing
+parent(i) = (i-1)/2;                // parent of i-th node
+left_child(i) = 2*i + 1;            // left child of i-th node
+right_child(i) = 2*i + 2;           // right child of i-th node
+
+// 1-based indexing
+parent(i) = i/2;                    // parent of i-th node
+left_child(i) = 2*i;                // left child of i-th node
+right_child(i) = 2*i + 1;           // right child of i-th node
+```
+</details>
+
+<details>
+<summary>(in-order dfs) verify binary search tree</summary>
+
+In-order dfs, check prev node is less
+
+```cpp
+bool is_bst(TreeNode* root) {
+  if (root == nullptr) { return false; }
+  stack<TreeNode*> stack;
+  TreeNode *curr = root, *prev = nullptr;
+  while (!(curr == nullptr && stack.empty())) {
+    if (curr != nullptr) {
+      stack.push(curr);     // save current node
+      curr = curr->left;    // keep descending on left side
+    }
+    else {                  // curr == nullptr, reached a leaf node
+      curr = stack.top();   // left side processed completely
+      stack.pop();          // now looking at curr node
+
+      // in-order step, do whatever with curr node
+      if (prev != nullptr && curr->value < prev->value) { return false; }
+
+      prev = curr;
+      curr = curr->right;   // descend down right side
+    }
+  }
+  return true;
+}
+```
+
+it is as if we have laid the BST linearly like a list in-order. we expect the nodes to be in sorted order.
+we can check all the adjacent items are in order.
+
+recursive version
+```cpp
+bool is_bst(TreeNode* root)
+{
+    TreeNode* prev = nullptr;
+    return recursive_is_bst(root, prev);
+}
+
+bool recursive_is_bst(TreeNode* root, TreeNode* &prev)
+{
+    if (root == nullptr) { return true; }
+
+    bool left_is_bst = recursive_is_bst(root->left, prev);
+
+    // in-order step
+    if (prev != nullptr && root->value < prev->value) { return false; }
+
+    prev = root;
+    bool right_is_bst = recursive_is_bst(root->right, prev);
+
+    return left_is_bst && right_is_bst;
+}
+```
+</details>
+
+<details><summary>verify tree is balanced</summary>
+
+verify:
+- left tree is balanced
+- right tree is balanced
+- difference of `height(left)` and `height(right)` is at most 1
+
+```cpp
+bool is_balanced(TreeNode* root)
+{
+    return recursive_is_balanced(root).has_value();
+}
+
+optional<int> recursive_is_balanced(TreeNode* root)
+{
+    if (root == nullptr) { return optional { 0 }; }     // is balanced
+
+    optional<int> left_balanced_height = recursive_is_balanced(root->left);
+    if (!left_balanced_height) { return left_balanced_height; }       // not balanced
+
+    optional<int> right_balanced_height = recursive_is_balanced(root->right);
+    if (!right_balanced_height) { return right_balanced_height; }     // not balanced
+
+    int diff = abs(left_balanced_height.value() - right_balanced_height.value());
+    if (diff <= 1) {
+        return optional { 1 + max(left_balanced_height.value(), right_balanced_height.value()) };
+    }
+    return nullopt; // not balanced
+}
+```
+
+</details>
+
+<details><summary>find lowest common ancestor of 2 nodes in a tree</summary>
+
+given a binary tree, root node, and 2 nodes p, q
+- is either p, q is in left subtree &rarr; `leftLCA`
+- is either p, q is in right subtree &rarr; `rightLCA`
+- if both true, then `root` node is LCA
+- otherwise, return `leftLCA` or `rightLCA`
+
+`find_lca(root, p, q)` will return the lowest common ancestor if both `p` and `q` are in the binary tree.
+
+if only 1 of them is found in the tree, the other is not a part of the tree, then it will return that node `p/q`
+
+```cpp
+TreeNode* find_lca(TreeNode* root, Data p, Data q)
+{
+    if (root == nullptr) { return nullptr; }
+
+    // found one node, stop descending, node itself becomes the ancestor
+    if (root->value == p || root->value == q) { return root; }
+
+    TreeNode* left_lca = find_lca(root->left, p, q);
+
+    TreeNode* right_lca = find_lca(root->right, p, q);
+
+    // found 1 node on left, and the other node on the right, root is the LCA
+    if (left_lca != nullptr && right_lca != nullptr) { return root; }
+
+    // only found 1 node, on left
+    if (left_lca != nullptr) { return left_lca; }
+
+    // either only found 1 node, on right (right_lca != nullptr)
+    // or no node found on left / right (right_lca == nullptr)
+    return right_lca;
+}
+```
+</details>
+
+<details><summary>sorted array to binary search tree</summary>
+
+```cpp
+TreeNode* sorted_array_to_bst(const vector<int>& A)
+{
+    if (A.empty()) { return nullptr; }
+
+    return recursive_sorted_array_to_bst(A, 0, A.size());
+}
+
+TreeNode* recursive_sorted_array_to_bst(const vector<int>& A, int l, int r)
+{
+    if (l >= r) { return nullptr; }
+
+    int mid = l + (r-l)/2;
+    TreeNode* root = new TreeNode { A[mid], nullptr, nullptr };
+    root->left = recursive_sorted_array_to_bst(A, l, mid);
+    root->right = recursive_sorted_array_to_bst(A, mid+1, r);
+    return root;
+}
+
+```
+</details>
+
+<details><summary>tbd</summary></details>
