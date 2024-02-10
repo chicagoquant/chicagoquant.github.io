@@ -20,3 +20,4 @@
 - [Num 5 sysprog](cheat-sysprog.md)
 - [Num 6 win](cheat-win.md)
 - [Num 7 typescript](cheat-typescript.md)
+- [Num 8 leet](cheat-leet.md)
