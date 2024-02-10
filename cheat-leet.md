@@ -22,9 +22,31 @@
 - Topological Sort
 
 Source: https://www.youtube.com/watch?v=g6TLB_tAaCI&list=WL&index=12&t=1688s
+
 Source: https://hackernoon.com/14-patterns-to-ace-any-coding-interview-question-c5bb3357f6ed
 
 See: https://seanprashad.com/leetcode-patterns/
+
+- Arrays and Hashing
+- Two Pointers
+- Stack
+- Binary Search
+- Sliding Window
+- Linked List
+- Trees
+- Tries
+- Backtracking
+- Heap / Priority Queue
+- Intervals
+- Greedy
+- Graphs
+- Advanced Graphs
+- 1-d Dynamic Programming
+- 2-d Dynamic Programming
+- Bit Manipulation
+- Math and Geometry
+
+Source: https://neetcode.io/roadmap
 
 # Problems
 
