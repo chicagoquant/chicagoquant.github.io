@@ -30,7 +30,7 @@
 - K-Way Merge
 - Topological Sort
 
-Source: https://www.youtube.com/watch?v=g6TLB_tAaCI&list=WL&index=12&t=1688s
+Source: [Youtube ACM UCR](https://www.youtube.com/watch?v=g6TLB_tAaCI&list=WL&index=12&t=1688s)
 
 Source: https://hackernoon.com/14-patterns-to-ace-any-coding-interview-question-c5bb3357f6ed
 
@@ -164,7 +164,7 @@ Is keeping `max_h` not sufficient? why do people keep track of `left_max_h` and 
 # Concepts
 
 <details>
-<summary>graphs</summary>
+<summary>Graphs, Trees</summary>
 
 graph - vertex, edge
 
@@ -172,10 +172,13 @@ undirected, directed, acyclic, weighted, adjacency
 
 connected, disconnected
 
+tree = directed, acyclic, connected graph
+
 graph algorithms
-- search
+- search (dfs, bfs)
 - detect a cycle
-- shortest path
+- shortest path (dijkstra, )
+- minimum spanning tree (kruskal, prim)
 
 binary tree
 - height or levels = `h`, min height = `log2(n)+1`
@@ -197,7 +200,7 @@ right_child(i) = 2*i + 1;           // right child of i-th node
 </details>
 
 <details>
-<summary>(in-order dfs) verify binary search tree</summary>
+<summary>Verify binary search tree (in-order dfs)</summary>
 
 In-order dfs, check prev node is less
 
@@ -359,27 +362,27 @@ for each number, pick it or drop it recursively, only going upto length K
 ```cpp
 vector<vector<int>> findKCombinations(int K, int N)
 {
-    vector<vector<int>> output;
-    vector<int> temp(K, 0);
+  vector<vector<int>> output;
+  vector<int> temp(K, 0);
 
-    kCombination(0, N, 0, K, temp, output);
+  kCombination(0, N, 0, K, temp, output);
 
-    return output;
+  return output;
 }
 
 void kCombination(int index, int N, int i, int K, vector<int>& temp, vector<vector<int>>& output)
 {
-    if (index == K)
-    {
-        output.push_back(temp);
-        return;
-    }
+  if (index == K)
+  {
+      output.push_back(temp);
+      return;
+  }
 
-    if (i >= N) return;
+  if (i >= N) return;
 
-    temp[index] = i+1;
-    kCombination(index+1, N, i+1, K, temp, output); // pick i+1
-    kCombination(index  , N, i+1, K, temp, output); // drop i+1
+  temp[index] = i+1;
+  kCombination(index+1, N, i+1, K, temp, output); // pick i+1
+  kCombination(index  , N, i+1, K, temp, output); // drop i+1
 }
 ```
 
@@ -468,6 +471,224 @@ void recursive_permutations(vector<int>& A, int n)
     }
 }
 ```
+</details>
+
+<details><summary>Graphs - Union-Find API, Connected Components</summary>
+
+The UnionFind interface
+
+```cpp
+struct UF {
+  UF(int N);                        // graph with N nodes [0, N-1]
+  void union(int p, int q);         // connection between p, q
+  int find(int p);                  // component id for p
+
+  int count() { return count_; }    // number of components
+  bool connected(int p, int q)      // are p and q in the same component
+    { return find(p) == find(q); }
+
+private:
+  vector<int> id_;              // component ids
+  int count_;                   // number of components
+};
+
+UF::UF(int N) : id_ {N, 0}, count_ { N }
+{
+  for (size_t i = 0; i < N; ++i)
+  {
+    id_[i] = i;
+  }
+}
+
+void main()
+{
+  UF uf(N);
+  for (auto& [p, q] : G.edges()) {
+    uf.union(p, q);
+  }
+}
+```
+
+Implementation: 1) Quick-Find -- `find()` operation is very quick, `O(1)`, but `union()` is very slow `O(N)`
+
+```cpp
+int UF::find(int p) {
+  return id_[p];
+}
+
+void UF::union(int p, int q) {
+  int pID = find(p);
+  int qID = find(q);
+
+  if (pID == qID) { return; }       // already in the same component
+
+  // change all id's for one component to component id of the other
+  for (int i = 0; i < id_.size(); ++i) {
+    if (id_[i] == pID) { id_[i] = qID; }
+  }
+  --count;
+}
+```
+
+Implementation: 2) Quick-Union -- `find()` is slow `O(tree height)`, but `union()` is quick `O(tree height)`
+
+```cpp
+int UF::find(int p) {
+  while (p != id_[p]) { p = id_[p]; }
+  return p;
+}
+
+void UF::union(int p, int q) {
+  int pRoot = find(p);
+  int qRoot = find(q);
+
+  if (pRoot == qRoot) { return; }       // already in the same component
+
+  id_[pRoot] = qRoot;
+  --count;
+}
+```
+
+Implementation: 3) Weighted quick-union (always attach smaller component as a child of larger components' root).
+`find()` is `O(log N)`, and `union()` is also `O(log N)`
+
+```cpp
+struct WeightedQuickUnionUF
+{
+  UF(int N);                        // graph with N nodes [0, N-1]
+  void union(int p, int q);         // connection between p, q
+  int find(int p);                  // component id for p
+
+  int count() { return count_; }    // number of components
+  bool connected(int p, int q)      // are p and q in the same component
+    { return find(p) == find(q); }
+
+private:
+  vector<int> id_;              // component ids
+  int count_;                   // number of components
+  vector<int> size_;            // component size (for roots)
+};
+
+WeightedQuickUnionUF::WeightedQuickUnionUF(int N) : id_ {N, 0}, count_ { N }, size_ {N, 1}
+{
+  for (size_t i = 0; i < N; ++i)
+  {
+    id_[i] = i;
+  }
+}
+
+int WeightedQuickUnionUF::find(int p) {
+  while (p != id_[p]) { p = id_[p]; }
+  return p;
+}
+
+void UF::union(int p, int q) {
+  int pRoot = find(p);
+  int qRoot = find(q);
+
+  if (pRoot == qRoot) { return; }       // already in the same component
+
+  if (size_[pRoot] < size_[qRoot]) { id_[pRoot] = qRoot; size_[qRoot] += size_[pRoot]; }
+  else                             { id_[qRoot] = pRoot; size_[pRoot] += size_[qRoot]; }
+  --count;
+}
+```
+
+Implementation: 4) Weighted quick-union with path compression -- during `find()` we keep updating component `id_` for nodes encountered to the root node of the component, to flatten the `id_` tree.
+`find()` is amortized `~O(1)`, and `union()` is also amortized `~O(1)`
+
+```cpp
+int WeightedQuickUnionUFPathCompression::find(int p) {
+  int root = p;
+  while (root != id_[root]) { root = id_[root]; }
+
+  while (id_[p] != root) { int parent = id_[p]; id_[p] = root; p = parent; } // flatten the tree
+
+  return root;
+}
+```
+
+### Connected Components - DFS
+
+Connected components can also be counted by doing a DFS traversal on the graph
+
+```cpp
+int connected_components_dfs(G)
+{
+  int count = 0;
+  int N = G.N;
+  vector<bool> visited {N, false};
+  vector<int> id {N, 0};
+
+  for (int v = 0; v < N; ++v) {
+    if (!visited[v]) {
+      ++count;
+      dfs_connected(v, count, G, visited, id);
+    }
+  }
+
+  return count;
+}
+
+void dfs_connected(int v, int component_id, Graph& G, vector<bool>& visited, vector<int>& id) {
+  visited[v] = true;
+  id[v] = component_id;
+  for (auto w : G.adj(v)) {
+    if (!visited[w]) {
+      dfs_connected(w, component_id, G, visited, id);
+    }
+  }
+}
+```
+
+</details>
+
+<details><summary>Graphs - Topological Sort (postorder dfs) on a DAG</summary>
+
+```cpp
+vector<int> topological(DirectedAcyclicGraph& G)
+{
+  int N = G.N;
+  vector<bool> visited { N, false };    //
+  vector<int> topo_order { N, 0 };      // vertices in topological order
+  int count = 0;                        // num vertices placed in topological order
+
+  for (int v = 0; v < N; ++v) {
+    dfs_topological_sort(v, count, G, visited, topo_order);
+  }
+
+  // assert(G.N == count), otherwise there is a cycle in the graph
+
+  return topo_order;
+}
+
+void dfs_topological_sort(int v, int& count, Graph& G, vector<bool>& visited, vector<int>& topo_order) {
+  if (visited[v]) { return; }
+
+  visited[v] = true;
+  for (auto w : G.adj(v)) {
+    if (!visited[w]) {
+      dfs_topological_sort(w, count, G, visited, topo_order);
+    }
+  }
+
+  // post-order steps -- all children nodes have been visited
+  ++count;
+  topo_order[G.N - count] = v;
+}
+```
+
+In a topological ordering of the vertices of a dag, all the descendents of a given vertex must
+come after that vertex. A recursive depth-first search starting from a vertex v first visits v and then
+recursively visits all the descendents of v. If we list the vertices in the order in which they are visited,
+they will be in topological order, since every vertex will be listed before its descendents. A single
+traversal, starting from a given vertex, will not necessarily visit every vertex in the graph (only the
+descendents of the starting vertex). To obtain a topological sort of all vertices, if there are unvisited
+vertices after the first traversal, we must do another traversal starting from an unvisited vertex and
+visiting only vertices that were not already visited in the first traversal. In the topological order,
+all vertices encountered during the second traversal precede all vertices encountered during the first
+traversal. Further traversals will be needed if there are still unvisited vertices.
+
 </details>
 
 <details><summary>tbd</summary></details>
