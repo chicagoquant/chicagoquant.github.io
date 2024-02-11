@@ -178,9 +178,9 @@ graph algorithms
 - shortest path
 
 binary tree
-- height or levels = `h >= log2(n+1)`
-- tree-nodes = `2**(h+1)-1 = N`
+- height or levels = `h`, min height = `log2(n)+1`
 - leaf-nodes = `2**h = n = (N+1)/2`
+- tree-nodes = `2**(h+1)-1 = N`
 - internal-nodes = `2**h-1 = n-1`
 
 ```cpp
@@ -290,8 +290,8 @@ optional<int> recursive_is_balanced(TreeNode* root)
 <details><summary>find lowest common ancestor of 2 nodes in a tree</summary>
 
 given a binary tree, root node, and 2 nodes p, q
-- is either p, q is in left subtree &rarr; `leftLCA`
-- is either p, q is in right subtree &rarr; `rightLCA`
+- is either p, q in left subtree &rarr; `leftLCA`
+- is either p, q in right subtree &rarr; `rightLCA`
 - if both true, then `root` node is LCA
 - otherwise, return `leftLCA` or `rightLCA`
 
@@ -345,6 +345,128 @@ TreeNode* recursive_sorted_array_to_bst(const vector<int>& A, int l, int r)
     return root;
 }
 
+```
+</details>
+
+<details><summary>combinations - K numbers from 1..N</summary>
+
+remember, we are picking combinations: like `(1,2,3)` once, we do not consider permutations `(2,3,1), ...`.
+
+i.e. order does not matter
+
+for each number, pick it or drop it recursively, only going upto length K
+
+```cpp
+vector<vector<int>> findKCombinations(int K, int N)
+{
+    vector<vector<int>> output;
+    vector<int> temp(K, 0);
+
+    kCombination(0, N, 0, K, temp, output);
+
+    return output;
+}
+
+void kCombination(int index, int N, int i, int K, vector<int>& temp, vector<vector<int>>& output)
+{
+    if (index == K)
+    {
+        output.push_back(temp);
+        return;
+    }
+
+    if (i >= N) return;
+
+    temp[index] = i+1;
+    kCombination(index+1, N, i+1, K, temp, output); // pick i+1
+    kCombination(index  , N, i+1, K, temp, output); // drop i+1
+}
+```
+
+fix a number for slot `index`, try all available combinations for slot `index+1`
+, and so on recursively upto K slots
+
+```cpp
+vector<vector<int>> findKCombinations(int K, int N)
+{
+    vector<vector<int>> output;
+    vector<int> temp(K, 0);
+
+    kCombination(0, 0, N, K, temp, output);
+
+    return output;
+}
+
+void kCombination(int index, int start, int end, int K, vector<int>& temp, vector<vector<int>>& output)
+{
+    if (index == K)
+    {
+        output.push_back(temp);
+        return;
+    }
+
+    for (int i = start; i < end && end-i+1 >= K-index; ++i)
+    {
+        temp[index] = i+1;
+        kCombination(index+1, i+1, end, K, temp, output);
+    }
+}
+```
+</details>
+
+<details><summary>next permutation</summary>
+
+```cpp
+void next_permutation(vector<int>& A)
+{
+    int N = A.size();
+    int j = N-2;
+    while (j+1 > 0 && A[j] > A[j+1])
+    {
+        --j;
+    }
+    // A[0] ... A[j] < A[j+1] ... A[N-1]
+
+    // find A[k] in A[j+1 : N], s.t. A[j] < A[k]
+    int k = N-1;
+    while (j < k && A[j] > A[k])
+    {
+        --k;
+    }
+    swap(A[j], A[k]);
+
+    // reverse A[j+1 : N]
+    int r = N-1;
+    int s = j+1;
+    while (r > s) {
+        swap(A[r], A[s]);
+        --r;
+        ++s;
+    }
+}
+```
+
+all permutations
+
+```cpp
+void all_permutations(vector<int>& A)
+{
+    recursive_permutation(A, A.size());
+}
+
+void recursive_permutations(vector<int>& A, int n)
+{
+    if (n == 1) {
+        // print permutation
+        return;
+    }
+
+    for (int i = 0; i < n; ++i) {
+        swap(A[i], A[n-1]);                 // remove ith item
+        recursive_permutations(A, n-1);     // all permutations without ith item
+        swap(A[i], A[n-1]);                 // restore ith item
+    }
+}
 ```
 </details>
 
