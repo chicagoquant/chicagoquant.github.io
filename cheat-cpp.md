@@ -2,24 +2,7 @@
 
 [github-repo](https://github.com/chicagoquant/chicagoquant.github.io/) [self](https://github.com/chicagoquant/chicagoquant.github.io/blob/main/cheat-cpp.md)
 
-## Header for C++ contests
-```cpp
-#include <bits/stdc++.h>
-
-using namespace std;
-
-using vi = vector<int>;
-using vvi = vector<vi>;
-using pii = pair<int, int>;
-using vpii = vector<pii>;
-
-#define rep(i,a,b) for(int i = (a); i < (b); ++i)
-#define re(b) for(int lkzij = (b); lkzij > 0; --lkzij)
-#define trav(a,x) for(auto& a : x)
-#define all(x) begin(x), end(x)
-#define sz(x) (int)(x).size()
-```
-
+## Starting point
 Lots of headers [Open this in Wandbox](https://wandbox.org/permlink/BiJDPA9v1OQqhHzo)
 ```cpp
 #include <iostream>
@@ -65,6 +48,24 @@ int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 }
 
 // flag: -Wno-unused
+```
+
+## Header files for contests
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using vi = vector<int>;
+using vvi = vector<vi>;
+using pii = pair<int, int>;
+using vpii = vector<pii>;
+
+#define rep(i,a,b) for(int i = (a); i < (b); ++i)
+#define re(b) for(int lkzij = (b); lkzij > 0; --lkzij)
+#define trav(a,x) for(auto& a : x)
+#define all(x) begin(x), end(x)
+#define sz(x) (int)(x).size()
 ```
 
 ## Canonical Class
