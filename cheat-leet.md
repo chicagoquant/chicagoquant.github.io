@@ -351,7 +351,7 @@ TreeNode* recursive_sorted_array_to_bst(const vector<int>& A, int l, int r)
 ```
 </details>
 
-<details><summary>combinations - K numbers from 1..N</summary>
+<details><summary>(backtracking) combinations - K numbers from 1..N</summary>
 
 remember, we are picking combinations: like `(1,2,3)` once, we do not consider permutations `(2,3,1), ...`.
 
@@ -424,7 +424,7 @@ void kCombination(int index, int start, int end, int K, vector<int>& temp, vecto
 ```
 </details>
 
-<details><summary>next permutation</summary>
+<details><summary>(backtracking) permutations</summary>
 
 ```cpp
 void next_permutation(vector<int>& A)
