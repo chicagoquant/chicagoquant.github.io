@@ -471,6 +471,34 @@ void recursive_permutations(vector<int>& A, int n)
     }
 }
 ```
+
+heaps algorithm
+```cpp
+void all_permutations(vector<int>& A)
+{
+    recursive_heaps_permutation(A, A.size());
+}
+
+void recursive_heaps_permutations(vector<int>& A, int n)
+{
+    if (n == 1) {
+        // print permutation
+        return;
+    }
+
+    for (int i = 0; i < n-1; ++i) {         // note loop ends at n-1
+        heaps_recursive_permutations(A, n-1);     // all permutations without ith item
+        if (is_odd(n)) {
+            swap(A[n-1], A[0]);             // swap the 1st item, when n is odd
+        }
+        else {
+            swap(A[n-1], A[i]);             // when even swap the ith item
+        }
+    }
+    // because the loop stops at n-1, we do this once in the end
+    heaps_recursive_permutations(A, n-1);
+}
+```
 </details>
 
 <details><summary>Graphs - Union-Find API, Connected Components</summary>
