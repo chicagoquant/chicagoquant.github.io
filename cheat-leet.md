@@ -359,6 +359,8 @@ i.e. order does not matter
 
 for each number, pick it or drop it recursively, only going upto length K
 
+$$ {N \choose K} = {N-1 \choose K} + {N-1 \choose K-1}$$
+
 ```cpp
 vector<vector<int>> findKCombinations(int K, int N)
 {
@@ -370,6 +372,9 @@ vector<vector<int>> findKCombinations(int K, int N)
   return output;
 }
 
+// index = slot being filled
+// i+1 = current value from [1..N] being used.
+// so i is the 0-based index of current value i+1
 void kCombination(int index, int N, int i, int K, vector<int>& temp, vector<vector<int>>& output)
 {
   if (index == K)
@@ -378,7 +383,7 @@ void kCombination(int index, int N, int i, int K, vector<int>& temp, vector<vect
       return;
   }
 
-  if (i >= N) return;
+  if (i+1 > N) return;
 
   temp[index] = i+1;
   kCombination(index+1, N, i+1, K, temp, output); // pick i+1
@@ -388,6 +393,8 @@ void kCombination(int index, int N, int i, int K, vector<int>& temp, vector<vect
 
 fix a number for slot `index`, try all available combinations for slot `index+1`
 , and so on recursively upto K slots
+
+$$ {N \choose K} = {N-1 \choose K} \times N $$
 
 ```cpp
 vector<vector<int>> findKCombinations(int K, int N)
@@ -720,3 +727,5 @@ traversal. Further traversals will be needed if there are still unvisited vertic
 </details>
 
 <details><summary>tbd</summary></details>
+
+
