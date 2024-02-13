@@ -67,10 +67,7 @@ Source: https://neetcode.io/roadmap
 
 # Problems
 
-<details>
-<summary>
-sliding window <a href="https://leetcode.com/problems/number-of-sub-arrays-of-size-k-and-average-greater-than-or-equal-to-threshold">[No of subarrays of size k and average &ge; threshold]</a>
-</summary>
+<details> <summary> sliding window <a href="https://leetcode.com/problems/number-of-sub-arrays-of-size-k-and-average-greater-than-or-equal-to-threshold">[No of subarrays of size k and average &ge; threshold]</a> </summary>
 
 ```cpp
 #include <algorithm>
@@ -97,10 +94,7 @@ public:
 ```
 </details>
 
-<details>
-<summary>
-two pointers <a href="https://leetcode.com/problems/container-with-most-water">[container with most water]</a>
-</summary>
+<details> <summary> two pointers <a href="https://leetcode.com/problems/container-with-most-water">[container with most water]</a> </summary>
 
 ```cpp
 class Solution {
@@ -127,10 +121,7 @@ public:
 ```
 </details>
 
-<details>
-<summary>
-two pointers <a href="https://leetcode.com/problems/trapping-rain-water/">[Trapping rain water]</a>
-</summary>
+<details> <summary> two pointers <a href="https://leetcode.com/problems/trapping-rain-water/">[Trapping rain water]</a> </summary>
 
 ```cpp
 class Solution {
@@ -163,8 +154,7 @@ Is keeping `max_h` not sufficient? why do people keep track of `left_max_h` and 
 
 # Concepts
 
-<details>
-<summary>Graphs, Trees</summary>
+<details> <summary>Graphs, Trees</summary>
 
 graph - vertex, edge
 
@@ -199,8 +189,7 @@ right_child(i) = 2*i + 1;           // right child of i-th node
 ```
 </details>
 
-<details>
-<summary>Verify binary search tree (in-order dfs)</summary>
+<details> <summary>Verify binary search tree (in-order dfs)</summary>
 
 In-order dfs, check prev node is less
 
@@ -407,6 +396,9 @@ vector<vector<int>> findKCombinations(int K, int N)
     return output;
 }
 
+// index = slot being filled
+// i+1 = current value from [1..N] being used.
+// so i is the 0-based index of current value i+1
 void kCombination(int index, int start, int end, int K, vector<int>& temp, vector<vector<int>>& output)
 {
     if (index == K)
@@ -643,7 +635,7 @@ int WeightedQuickUnionUFPathCompression::find(int p) {
 }
 ```
 
-### Connected Components - DFS
+Connected Components - DFS
 
 Connected components can also be counted by doing a DFS traversal on the graph
 
@@ -725,6 +717,150 @@ all vertices encountered during the second traversal precede all vertices encoun
 traversal. Further traversals will be needed if there are still unvisited vertices.
 
 </details>
+
+<details><summary>backtracking</summary>
+
+backtracking -- to enumerate all states, bound function check to prune the tree to optimize
+- feasible solution to a decision problem -- whether true / false?
+- solve optimization problems
+- enumerate all feasible solutions
+
+example problems:
+- n queen placement
+- all subsets of numbers, that sum up to a target T
+- graph coloring: minimum colors to color a graph
+- hamiltonian path (from S to T, visits all the vertices of the graph)
+</details>
+
+<details><summary>dynamic programming</summary>
+
+- fibonacci
+```cpp
+int memoized_fibo(int n) {
+  if (n == 0) { return 0; }
+  if (n == 1) { return 1; }
+  if (F[n] == invalid) {
+    F[n] = memoized_fibo(n-1) + memoized_fibo(n-2)
+  }
+  return F[n];
+}
+
+/*
+memoized_fibo(5)          -> 8 => F[5]
+  memoized_fibo(4)        -> 5 => F[4]
+    memoized_fibo(3)      -> 3 => F[3]
+      memoized_fibo(2)    -> 2 => F[2]
+        memoized_fibo(1)  -> 1
+        memoized_fibo(0)  -> 0
+      memoized_fibo(1)    -> 1
+    memoized_fibo(2)      .. F[2] = 2
+      memoized_fibo(1)    x
+      memoized_fibo(0)    x
+  memoized_fibo(3)        .. F[3] = 3
+    memoized_fibo(2)      x
+      memoized_fibo(1)    x
+      memoized_fibo(0)    x
+    memoized_fibo(1)      x
+*/
+```
+
+```cpp
+int iterative_fibo(n) {
+  vector<int> F {n};
+  F[0] = 0;
+  F[1] = 1;
+  for (int i = 2; i <= n; ++i) {
+    F[i] = F[i-1] + F[i-2]; // we don't need to store these all
+  }
+  return F[n];
+}
+
+int better_iterative_fibo(n) {
+  int prev = 1;   // weird base case F[-1] = 1, so that fibo(0) = 0
+  int curr = 0;
+  for (int i = 1; i <= n; ++i) {
+    int next = curr + prev;
+    prev = curr;
+    curr = next;
+  }
+  return curr;
+}
+```
+
+- length of the longest increasing subsequence `A[1..n]`
+
+find the longest sequence of indices
+
+$$
+1 \le i_1 \lt i_2 \lt \cdots \lt i_l \le n\\
+\text{ s.t. } A[i_k] \lt A[i_{k+1}], \forall k
+$$
+
+`LISbigger(prev, j)` - given 2 indices `prev < j`, find the longest increasing subsequence of `A[j..n]`, s.t. all its elements are larger than `A[prev]`
+
+Compute `A[0] = INT_MIN; LISBigger(prev=0, j=1)`. i.e. we are looking for longest subsequence in `A[1..n]`, where `A[i] > INT_MIN` for all `i in [1..n]`
+
+$$
+\text{LISbigger}(i,j) =
+\left\{
+  \begin{array}{ll}
+  0 & \text{if } j > n \\
+  \text{LISbigger}(i, j+1) & \text{if } A[i] \ge A[j] \\
+  \text{max}(\text{LISbigger}(i, j+1), 1+\text{LISbigger}(j, j+1)) & \text{otherwise}
+  \end{array}
+\right.
+$$
+
+Another recurrence, longest increasing subsequence of `A[i..n]` that begins with `A[i]`
+$$
+\text{LISfirst}(i) = 1 + \max \left\{ \text{LISfirst}(j) | j > i \text{ and } A[j] > A[i] \right\}
+$$
+
+$O(N^2)$ algorithm
+
+```cpp
+int dp_lis(vector<int>& A, int N) {
+  A[0] = INT_MIN;       // sentinel
+  vector<int> LISfirst {N+1};
+  for (int i = N; i >= 0; --i) {
+    LISfirst[i] = 1;
+    for (int j = i+1; j < N; ++j) {
+      if (A[j] > A[i] && (1+LISfirst[j]) > LISfirst[i]) {
+        LISfirst[i] = 1 + LISfirst[j];
+      }
+    }
+  }
+  return LISfirst[0]-1;  // don't count the sentinel
+}
+```
+
+- longest common subsequence, given 2 strings, find longest subsequence, by dropping some characters from the strings
+- longest common substring, can not drop characters
+- longest palindromic sequence, can reorder characters and drop some
+- longest repeating subsequence
+
+- edit distance
+
+- subset sum
+- equal subset, partition a given set into 2 parts, such that sums of them are equal
+
+- bellman-ford shortest path
+- floyd-warshall shortest path
+
+- knapsack (0-1) bounded, given `N` items with `profits`, `weights`. find the number of items that can be put in a knapsack with weight capacity `W`, with max profit
+- 0/1 knapsack bounded
+
+- coin change minimum problem
+- coin change ways
+
+</details>
+
+
+<details><summary>divide and conquer</summary></details>
+
+<details><summary>greedy</summary></details>
+
+<details><summary>network flow</summary></details>
 
 <details><summary>tbd</summary></details>
 
