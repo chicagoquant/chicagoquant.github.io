@@ -1077,6 +1077,10 @@ vector<any> va = { 1, 20.0, "hello", A(), };
 
 #### Implementation idea - any
 ```cpp
+namespace AA {
+
+struct bad_any_cast1 : std::exception {};
+
 struct any
 {
   void* data_;
@@ -1101,11 +1105,52 @@ struct any
   {
   }
 
+  any(any&& other)
+    : data_(exchange(other.data_, nullptr))
+    , getType_(other.getType_)
+    , clone_(other.clone_)
+    , destroy_(other.destroy_)
+  {
+    other.data_ = nullptr;
+  }
+
+  any& operator=(any other) noexcept {
+      swap(*this, other);
+      return *this;
+  }
+
+  template<typename T>
+  any& operator=(T&& t) {
+      operator=(any { std::forward<T>(t) });
+      return *this;
+  }
+
+  void swap(any& a, any& b) noexcept {
+      using std::swap;
+      swap(a.data_, b.data_);
+      swap(a.getType_, b.getType_);
+      swap(a.clone_, b.clone_);
+      swap(a.destroy_, b.destroy_);
+  }
+
   ~any()
   {
     destroy_(data_);
   }
+
+  template<typename T>
+  T& inner()
+  {
+    if (typeid(T) == getType_()) { return *static_cast<T*>(data_); }
+    throw bad_any_cast1 {};
+  }
+
 };
+
+template<typename T>
+T& any_cast1(any& a) { return a.inner<T>(); }
+
+}
 
 // https://www.fluentcpp.com/2021/02/05/how-stdany-works/
 ```
