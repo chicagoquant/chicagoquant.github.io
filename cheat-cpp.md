@@ -41,6 +41,7 @@ auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 {
+    cout << boolalpha; // so that it prints boolean values as true/false
     auto s = "hello"s;
     cout << s << endl;
     cout << string(100, '-') << endl;
@@ -1153,6 +1154,8 @@ T& any_cast1(any& a) { return a.inner<T>(); }
 }
 
 // https://www.fluentcpp.com/2021/02/05/how-stdany-works/
+// https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/std/any
+// https://github.com/llvm/llvm-project/blob/main/libcxx/include/any
 ```
 
 #### Usage - variant (type-safe union)
