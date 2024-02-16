@@ -1161,7 +1161,7 @@ T& any_cast1(any& a) { return a.inner<T>(); }
 #### Usage - variant (type-safe union)
 
 - not allowed to allocate additional memory dynamically on heap
-- can not stre references, arrays or void
+- can not take references, arrays or void
 - all the types must be specified in template parameters
 - use `std::monostate` as first argument if first argument is not default constructible type
 - `index()`, `visit()`, `get<T>()`, `variant_size<V>::value == variant_size_v<V>`, `variant_alternative<V>::type == variant_alternative_t<V>`
@@ -1219,34 +1219,7 @@ for (auto& v : vv) {
 
 #### Implementation idea - variant
 ```cpp
-template<typename ...Types>
-class Variant
-{
-  size_t active_idx;
-  VariadicUnion<Types...> data;
-public:
-  template<typename T>
-    requires (same_as<T, Types> or ... )
-  Variant(T&& v)
-    : active_idx( PackIndex<T, Types...>::value )
-    , data( integral_constant<size_t, PackIndex<T, Types...>::value>(), forward<T>(v) )
-  {}
-
-  // template<typename T> Variant& operator=(T&& v);
-
-  ~Variant() {
-    data.destroy(active_idx);
-  }
-
-  size_t index() const { return active_idx; }
-
-  template<std::size_t I>
-  auto& get()
-  {
-    assert( I == active_idx );
-    return data.template get<I>();
-  }
-};
+#include <cassert>
 
 // ---------------------------------------------------------------------------
 // to compute index of type T1 in Ts...
@@ -1322,6 +1295,38 @@ union VariadicUnion<T1>                       // base case
   }
 };
 
+template<typename ...Types>
+class Variant
+{
+  size_t active_idx;
+  VariadicUnion<Types...> data;
+public:
+  template<typename T>
+    requires (same_as<T, Types> or ... )
+  Variant(T&& v)
+    : active_idx( PackIndex<T, Types...>::value )
+    , data( integral_constant<size_t, PackIndex<T, Types...>::value>(), forward<T>(v) )
+  {}
+
+  // template<typename T> Variant& operator=(T&& v);
+
+  ~Variant() {
+    data.destroy(active_idx);
+  }
+
+  size_t index() const { return active_idx; }
+
+  template<std::size_t I>
+  auto& get()
+  {
+    assert( I == active_idx );
+    return data.template get<I>();
+  }
+};
+
+Variant<int, double, bool> v { false };
+v.index() == 2;
+v.get<2>();
 // ---------------------------------------------------------------------------
 ```
 
