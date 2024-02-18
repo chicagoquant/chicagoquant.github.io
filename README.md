@@ -22,3 +22,4 @@
 - [Num 6 win](cheat-win.md)
 - [Num 7 typescript](cheat-typescript.md)
 - [Num 8 leet](cheat-leet.md)
+- [Num 9 algo](cheat-algo.md)

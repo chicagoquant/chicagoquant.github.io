@@ -557,8 +557,96 @@ enum class; enum struct;      // scoped enum, need static_cast to convert to int
 enum class Color { red, green, blue }; Color r = Color::red;
 union;
 class; struct;
-
 ```
+
+### Conversion between number and string
+
+`std::to_string()`, itoa, stringstream, boost lexical_cast, fmt library
+
+```cpp
+#include <string>
+
+int n = 100;
+string s = std::to_string(n);       // overloads for all numeric types, but uses C functions, not thread-safe
+// s = "100"s
+```
+
+reverse conversion: `std::atoi("100")`, see also: `atol, atoll`
+
+see also: `strtol(s, &endptr, base) -> long`
+
+and for string: `string s = "100"; std::stoi(s)`, see also: `stol, stoul, stoll, stoull, stof, stod, stold`
+
+```cpp
+#include <string>
+#include <cstdio>
+
+int n = 100;
+char s[100];
+std::sprintf(s, "%d", n);
+string s2 = s;
+// s2 = "100"s
+
+int sz = std::snprintf(nullptr, 0, "%d", n);    // calculate string size for number n
+char* out = new char[sz+1];                     // use the right amount of space
+std::snprintf(out, sz+1, "%d", n);
+std::sprintf(out, "%d", n);
+delete[] out;
+```
+
+reverse conversion: `sscanf(str, format-string, &n)` example: `sscanf(str, "%d", &n)`
+
+```cpp
+#include <charconv>
+#include <array>
+array<char, 10> out;
+auto res = std::to_chars(out.data(), out.data()+out.size(), n);
+const std::errc no_error{};
+if (res.ec == no_error) {
+  // res.ptr points past the end of the number in string
+  cout << string_view(out.data(), res.ptr) << endl;
+}
+
+#include <format>
+#include <string>
+string s = std::format("{}", n);
+```
+
+```cpp
+#include <sstream>
+#include <string>
+
+using namespace std;
+
+string my_num_string(int n) {}
+  ostringstream ss;
+  ss << n;
+  return ss.str();
+}
+```
+
+```cpp
+#include <boost/lexical_cast.hpp>
+
+int n = 100;
+
+string s = boost::lexical_cast<string>(n);
+```
+
+fmt library
+
+```cpp
+#include <string>
+#include <fmt/core.h>
+
+int n = 100;
+string s = fmt::format("{}", n);
+
+auto out = fmt::memory_buffer();
+fmt::format_to(out, "{}", n);
+cout << string_view(out.data(), out.data()+out.size()) << endl;
+```
+
 
 ### CPP Number limits
 
