@@ -57,16 +57,29 @@ int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 
 using namespace std;
 
-using vi = vector<int>;
-using vvi = vector<vi>;
-using pii = pair<int, int>;
-using vpii = vector<pii>;
+namespace ME {
+using VS = vector<string>;
+using VVS = vector<vector<string>>;
+using VI = vector<int>;
+using VVI = vector<vector<int>>;
+using PQI = priority_queue<int>;
+using MAXPQI = PQI;
+using MINPQI = priority_queue<int, VI, greater<int>>;
+}
 
-#define rep(i,a,b) for(int i = (a); i < (b); ++i)
-#define re(b) for(int lkzij = (b); lkzij > 0; --lkzij)
-#define trav(a,x) for(auto& a : x)
-#define all(x) begin(x), end(x)
-#define sz(x) (int)(x).size()
+using ME::VI;
+
+#define REP(i,a,b) for(int i = (a); i < (b); ++i)
+#define RE(b) for(int lkzij = (b); lkzij > 0; --lkzij)
+#define TRAV(a,x) for(auto& a : x)
+#define ALL(x) begin(x), end(x)
+#define SZ(x) (int)(x).size()
+
+int main()
+{
+    VI v { 1, 2, 3, 4 };
+    cout << v.size() << endl;
+}
 ```
 
 ## Canonical Class
