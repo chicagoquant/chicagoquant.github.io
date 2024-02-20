@@ -2214,6 +2214,8 @@ inclusive_scan(                                           // new, parallelizable
 */
 ```
 
+see also: `exclusive_scan`, `transform_inclusive_scan`, `transform_exclusive_scan`
+
 ### std ranges
 ```cpp
 #include <ranges>
@@ -3525,6 +3527,16 @@ this_thread::sleep_until(steady_clock::now() + 500ms);
 ## Generate sequence of numbers
 
 ```cpp
+#include <numeric>
+#include <vector>
+size_t n = 10, start = 1;
+std::vector<long> v(n);
+iota(v.begin(), v.end(), start);
+
+#include <random>
+shuffle(v.begin(), v.end(), std::mt19937 {std::random_device{}()});
+
+// use generate_n
 size_t n = 10, start = 1;
 std::vector<long> v;
 v.reserve(n);
@@ -3532,8 +3544,17 @@ std::generate_n(
   std::back_inserter(v),
   n,
   [i = start]() mutable { return i++; }
-  );
+);
 // v = { 1, 2, 3, ..., n }
+
+// use generate
+size_t n = 10, start = 1;
+std::vector<long> v(n);
+std::generate(
+  v.begin(),
+  v.end(),
+  [i = start]() mutable { return i++; }
+);
 ```
 
 ## Random data
