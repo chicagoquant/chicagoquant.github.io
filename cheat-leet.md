@@ -423,6 +423,7 @@ void next_permutation(vector<int>& A)
 {
     int N = A.size();
     int j = N-2;
+    // find until where (from right) is A sorted
     while (j+1 > 0 && A[j] > A[j+1])
     {
         --j;
@@ -435,6 +436,7 @@ void next_permutation(vector<int>& A)
     {
         --k;
     }
+    // invariant: A[j] < A[k]
     swap(A[j], A[k]);
 
     // reverse A[j+1 : N]
@@ -447,6 +449,32 @@ void next_permutation(vector<int>& A)
     }
 }
 ```
+
+1. find the right portion of the array that is in decreasing order `A[j+1, end)` is decreasing
+2. find first element in that right portion that is upper bound of `A[j]`, ie, `A[j] < A[k]`
+3. swap `A[j]` and `A[k]`
+4. reverse A[j+1..end)
+
+STL next permutation
+```cpp
+template<class BidirIt>
+bool next_permutation(BidirIt first, BidirIt last)
+{
+    auto r_first = std::make_reverse_iterator(last);
+    auto r_last = std::make_reverse_iterator(first);
+    auto left = std::is_sorted_until(r_first, r_last);
+ 
+    if (left != r_last)
+    {
+        auto right = std::upper_bound(r_first, left, *left);
+        std::iter_swap(left, right);
+    }
+ 
+    std::reverse(left.base(), last);
+    return left != r_last;
+}
+```
+
 
 all permutations
 

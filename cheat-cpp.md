@@ -2346,6 +2346,23 @@ rv::transform(
 );
 ```
 
+### search a string in a large text
+
+use boyer moore searcher
+
+```cpp
+const string haystack = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+const string needle = "consectetur";
+
+auto boyer_moore_searcher searcher(cbegin(needle), cend(needle));         // can reuse for multiple searches
+const auto result = search(cbegin(haystack), cend(haystack), searcher);
+
+if (result != cend(haystack))
+    cout << "Found it.\n";
+else
+    cout << "Not found.\n";
+```
+
 ### Utilities - move forward
 ```cpp
 std::move(v) = static_cast<remove_reference<T>::type&&>(v)
@@ -2359,6 +2376,15 @@ remove_reference<T&>::type = T
 remove_reference<T&&>::type = T
 ```
 
+### Utilities - clamp
+
+```cpp
+const int low = -32'768;
+const int high = 32'767;
+cout << clamp(12'000, low, high) << '\n';   // 12,000
+cout << clamp(-36'000, low, high) << '\n';  // -32,768
+cout << clamp(40'000, low, high) << '\n';   // 32,767
+```
 
 
 ## Templates
@@ -3590,6 +3616,26 @@ srand(0); // seed with a deterministic value
 int X = rand();
 ```
 
+## Sample items from an array
+```cpp
+// initialize random generator
+random_device seeder;
+const auto seed = seeder.entropy() ? seeder() : time(nullptr);
+default_random_engine generator(
+       static_cast<default_random_engine::result_type>(seed));
+
+// input data
+vector<int> data(20);
+iota(begin(data), end(data), 1);
+
+// sample
+const size_t numberOfSamples = 5;
+vector<int> sampledData(numberOfSamples);
+sample(cbegin(data), cend(data), begin(sampledData), numberOfSamples, generator);
+
+// sampleData[] has 5 items picked from data[]
+```
+
 ## Generate N random strings of lengths upto L
 ```cpp
 constexpr uint L = 2**22, N = 2**18;
@@ -3616,7 +3662,11 @@ for (uint i = 0; i < N; ++i)
 ```cpp
 #include <algorithm>
 for (size_t i = 0; i < N; ++i) { v[i] = i;}
-std::random_shuffle(v.begin(), v.end());
+std::random_shuffle(v.begin(), v.end());        // removed in C++17, use shuffle instead
+
+random_device rd;
+mt19937 gen(rd());
+shuffle(v.begin(), v.end(), gen);
 ```
 
 ## Use array of function pointers to avoid branch
