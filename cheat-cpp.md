@@ -109,14 +109,21 @@ public:
   // replaces both A::swap(b), std::swap(a, b)
   friend void swap(A& a, A& b) noexcept {
     cout << "friend swap(A& a=" << &a << ", A& b=" << &b << ")" << endl;
-    // member1.swap(b.member1); or std::swap(a.member, b.member);
+    //
+    // // argument dependent lookup (ADL) rules will prefer a more specific swap,
+    // // if nothing specific available, will fallback to std::swap
+    // // member1.swap(b.member1);
+    // // or swap(member1, b.member1)
+    // // or std::swap(a.member1, b.member1);
+    //
+    // using std::swap;         // allow ADL
     // swap(pointerMember, b.pointerMember);
     // swap(basicTypeMember, b.basicTypeMember);
   }
 
   // void swap(A& b) noexcept {
   //   cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
-  //   // member1.swap(b.member1); or std::swap(a.member, b.member);
+  //   // using std::swap;      // allow ADL
   //   // swap(pointerMember, b.pointerMember);
   //   // swap(basicTypeMember, b.basicTypeMember);
   // }
