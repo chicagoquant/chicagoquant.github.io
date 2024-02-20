@@ -2154,11 +2154,64 @@ sort(v.rbegin(), v.rend()); // reverse order sort
 ### sum of vector
 
 ```cpp
-#include <algorithm>
-int sum = accumulate(v.begin(), v.end(), 0);
+#include <numeric>
+int sum = accumulate(v.begin(), v.end(), 0); // older api
 
 #include <numeric>
-int sum = reduce(v.begin(), v.end(), 0);
+int sum = reduce(v.begin(), v.end(), 0); // introduces parallal execution
+```
+
+transform
+
+```cpp
+std::string s("hello");
+std::transform(s.cbegin(), s.cend(), s.begin(), [](char c) { return std::toupper(c); }};
+
+vector<int> ordinals;
+ordinals.reserve(s.size());
+std::transform(s.cbegin(), s.cend(), back_inserter(ordinals), [](char c) -> int { return static_cast<int>(c); });
+
+// inner product
+vector<int> v1 { 1, 2, 3, 4 };
+vector<int> v2 { 10, 9, 8, 7 };
+vector<int> out(v1.size(), 0);
+transform(v1.cbegin(), v1.cend(), v2.cbegin(), out.begin(), [](int a, int b) { return a*b; });
+int dot = reduce(out.cbegin(), out.cend());
+
+// 1-step without temp copying
+int dot = transform_reduce(
+  v1.cbegin(), v1.cend(),
+  v2.cbegin(),
+  0,                        // init
+  plus<int>(),              // reduce
+  multiplies<int>()         // transform
+  );
+dot = transform_reduce(v1.cbegin(), v1.cend(), v2.cbegin(), 0); // same, defaults are plus, multiply
+```
+
+prefix sum / partial sum
+
+```cpp
+vector<int> v {1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+vector<int> out;
+
+partial_sum(v.cbegin(), v.cend(), back_inserter(out));    // older api
+
+inclusive_scan(                                           // new, parallelizable
+  v.cbegin(),
+  v.cend(),
+  back_inserter(out)
+  // default: binary_op = plus<int>()
+  // default: init = 0
+  );
+
+/*
+     v0
+     v0+v1
+     ...
+     v0+v1+...+vi
+     ...
+*/
 ```
 
 ### std ranges
@@ -3467,6 +3520,20 @@ using std::chrono_literals;
 this_thread::sleep_for(400ms);
 
 this_thread::sleep_until(steady_clock::now() + 500ms);
+```
+
+## Generate sequence of numbers
+
+```cpp
+size_t n = 10, start = 1;
+std::vector<long> v;
+v.reserve(n);
+std::generate_n(
+  std::back_inserter(v),
+  n,
+  [i = start]() mutable { return i++; }
+  );
+// v = { 1, 2, 3, ..., n }
 ```
 
 ## Random data
