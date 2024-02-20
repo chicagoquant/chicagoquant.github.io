@@ -2151,11 +2151,16 @@ double ten = twice(5.0);
 
 ### sort
 
+- default sorts in increasing order (or non-decreasing order), `A[j] <= A[j+1]`
+- default comparator is less, `<`
+- after sort `comparator(A[j+1], A[j]) == false`, equivalent to `not(A[j+1] < A[j]) --> A[j] <= A[j+1]`
+
 ```cpp
 sort(v.begin(), v.end(), [](const A& a, const A& b) { return a.m1 < b.m1; }); // lambda expr
 //  lambda => "closure type" with public inline call operator
 
 sort(v.rbegin(), v.rend()); // reverse order sort
+sort(v.begin(), v.end(), greater<int>()); // in decreasing order
 ```
 
 ### sum of vector
@@ -2368,6 +2373,15 @@ if (result != cend(haystack))
     cout << "Found it.\n";
 else
     cout << "Not found.\n";
+
+
+// default search
+auto result = search(cbegin(haystack), cend(haystack), cbegin(needle), cend(needle));
+if (result != cend(haystack))
+{
+  // found it
+}
+
 ```
 
 ### Utilities - move forward
@@ -2579,6 +2593,36 @@ copy(src.begin(), src.end(), ostream_iterator<int>(cout, separator));
 
 auto print_elem = [](const auto& i) { cout << i << ", "; };
 for_each(cbegin(src), cend(src), print_elem);
+```
+
+## alignment and packing
+
+```cpp
+struct alignas(8) X {   // struct is aligned to 8-byte address boundary
+  int a;
+  int b;
+};
+
+alignas(long long) int data;
+
+using cacheline_t = alignas(64) array<char, 64>;
+using cacheline_t = alignas(64) char[64];
+
+// get alignment of a type
+alignof(X) == 8
+
+struct Y {
+  char a;
+  int x[2] __attribute__((packed));
+};
+
+// or
+#pragma pack(1)
+
+// or
+struct Z {
+  ...
+} __attribute__((packed));
 ```
 
 ## Thread
