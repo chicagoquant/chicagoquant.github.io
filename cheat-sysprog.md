@@ -218,6 +218,64 @@ int ef_driver_close(ef_driver_handle dh);
 - EF_VI: [https://docs.xilinx.com/v/u/en-US/SF-114063-CD-ef_vi_User_Guide](https://docs.xilinx.com/v/u/en-US/SF-114063-CD-ef_vi_User_Guide)
 - Documentation: [https://www.xilinx.com/support/download/nic-software-and-drivers.html#open](https://www.xilinx.com/support/download/nic-software-and-drivers.html#open)
 
+## TCP Direct
+
+```cpp
+#include <zf/zf.h>
+
+// libonload_zf.so
+// libonload_zf_static.a libciull.a
+
+// zf_debug app
+// ZF_ATTR=interface=ethX
+
+zf_muxer_wait()
+zf_attr attr {
+  interface = "eth0",
+  n_bufs = 2,
+};
+zf_stack* pstack = nullptr;
+zf_stack_alloc(zf_attr* &attr, zf_stack** &pstack);
+zf_stack_free(zf_stack* pstack);
+
+zftl* tl_out;
+zftl_listen(sf_stack* pstack, sockaddr* &laddr, socklen_t laddrlen, zf_attr* &attr, zftl** &tl_out);
+zftl_accept(zftl* tl_out, zft** ts_out);
+
+zft_alloc(zf_stack* pstack, zf_attr* &attr, zft_handle** &handle_out);
+zft_addr_bind();
+
+zft_connect();
+zft_zc_recv();
+zft_zc_recv_done();
+
+zft_recv();
+zft_send();
+
+zf_alternatives_alloc(zf_stack* pstack, zf_attr* &attr, zf_althandle* &alt);
+zf_alternatives_release(zf_stack* pstack, zf_althandle alt);
+zf_alternatives_send(zf_stack* pstack, zf_althandle alt);
+zf_alternatives_cancel(zf_stack* pstack, zf_althandle alt);
+zf_alternatives_queue(zft* ts, zf_althandle alt, iovec* iov, iov_cnt, flags);
+zf_alternatives_free_space(zf_stack* pstack, zf_althandle alt);
+
+zftl_free(zftl* tl_out);
+
+// epoll muxer
+zf_muxer_set set;
+zf_waitable* zfur_to_waitable(zfur* us); // UDP receive
+zf_waitable* zfut_to_waitable(zfut* us); // UDP transmit
+zf_waitable* zftl_to_waitable(zftl* tl); // TCP listening
+zf_waitable* zft_to_waitable(zft* ts); // TCP
+
+zf_muxer_add(zf_muxer_set* &set, zf_waitabile* w, epoll_event* ev);
+zf_muxer_mod(zf_waitabile* w, epoll_event* ev);
+zf_muxer_del(zf_waitabile* w);
+
+zf_muxer_wait(zf_muxer_set* &set, epoll_event* events, int maxevents, int64_t timeout);
+
+```
+
 ## LMAX Disruptor
 
 LMAX Concepts
@@ -562,6 +620,26 @@ close(epfd)
 ```
 
 epoll - used by libuv, libev, gevent
+
+
+select
+- have to build each `fdset` before each call
+- check each bit `O(n)`,
+- have to iterate over file descriptors to check if it exists in the set returned
+- portable across flavors of unix
+
+poll
+- does not require highest numbered file descriptor
+- more efficient for very large valued file descriptors
+- input events are separate from output events, so don't need to reconstruct the fd set on each call
+
+epoll
+- create a context in kernel space, `epoll_create`
+- fd set is managed in kernel space, `epoll_ctl`
+- can add/remove fd's while waiting
+- `epoll_wait` returns only the objects with ready fds
+- better performance `O(1)`
+- Linux specific
 
 ### New Technologies
 io\_uring -  async interface to kernel, less system calls, same API for file i/o and network i/o
