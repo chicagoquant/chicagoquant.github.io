@@ -37,6 +37,13 @@ using namespace std::string_literals;   // for "..."s
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+constexpr const char* multiline_string = R"""(hello
+world
+)""";
+constexpr const char* multiline_also = R"(hello
+world
+)";
+
 auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
@@ -704,6 +711,7 @@ v = (a.*memfp)(x, y);
 
 namespace rv = std::ranges::views;   // same as std::views
 
+// multiline string
 const char* csv_data = R"(field1,field2,field3
 10,40,"hello world"
 20,80,"abcd efg"
