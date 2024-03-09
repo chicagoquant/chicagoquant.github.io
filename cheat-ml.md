@@ -1,5 +1,6 @@
 
-<details><summary>regression</summary>
+<details><summary>regression sm.OLS</summary>
+
 - import modules
 ```python
 import numpy as np
@@ -38,7 +39,7 @@ results.summary()
 
 - predict
 ```python
-newX = pd.DataFrame({'X_1': [100, 200, 300]})
+newX = pd.DataFrame({'X1': [100, 200, 300]})
 estimatedY = results.get_predictions(newX)
 estimatedY.predicted_mean()
 ```
