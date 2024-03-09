@@ -16,6 +16,7 @@
   - [Num 1.5 tmp](cheat-cpp-tmp.md)
 - [Num 2 python](cheat-python.md)
   - [Num 2.5 pandas/kaggle](cheat-pandas.md)
+    [ml](cheat-ml.md)
 - [Num 3 rust](cheat-rust.md)
 - [Num 4 dp](cheat-dp.md)
 - [Num 5 sysprog](cheat-sysprog.md)
@@ -23,3 +24,4 @@
 - [Num 7 typescript](cheat-typescript.md)
 - [Num 8 leet](cheat-leet.md)
 - [Num 9 algo](cheat-algo.md)
+- [Num 10 isl](cheat-islp.md)
