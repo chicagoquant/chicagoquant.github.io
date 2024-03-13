@@ -1,3 +1,28 @@
+# Data
+
+| Dataset | Filename |
+|---|---|
+| NCI60 | labels(Y) = NCI60labs.csv, features(X) = NCI60data.npy |
+| Khan | Khan\_xtrain.csv, Khan\_ytrain.csv, Khan\_xtest.csv, Khan\_ytest.csv |
+| Hitters | Hitters.csv |
+| Carseats | Carseats.csv |
+| NYSE | NYSE.csv |
+| Publication | Publication.csv |
+| BrainCancer | BrainCancer.csv |
+| Bikeshare | Bikeshare.csv |
+| Wage | Wage.csv |
+| Auto | Auto.csv |
+| Boston | Boston.csv |
+| Caravan | Caravan.csv |
+| College | College.csv |
+| Credit | Credit.csv |
+| Default | Default.csv |
+| Fund | Fund.csv |
+| OJ | OJ.csv |
+| Portfolio | Portfolio.csv |
+| Smarket | Smarket.csv |
+| Weekly | Weekly.csv |
+
 # Ch 2
 ```python
 print('fit a model with', 11, 'variables')
@@ -390,6 +415,11 @@ def abline(ax, b, m, *args, **kwargs):
     xlim = ax.get_xlim()
     ylim = [m * xlim[0] + b, m * xlim[1] + b]
     ax.plot(xlim, ylim, *args, **kwargs)
+
+# see also
+# ax.axline((a0, b0), (a1, b1), linewidth=4, color='r'),
+# ax.axline((a0, b0), slope=m, linewidth=4, color='r'),
+# ax.axhline(y, color='k', linestyle='--') for horizontal line
 
 
 ax = Boston.plot.scatter('lstat', 'medv')
