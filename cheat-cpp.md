@@ -164,7 +164,8 @@ T t(some_param); // direct
 T t { 'a', "hello", 1 }; // list
 T& tr = t; // reference
 T t = T(); T{};  // value (empty-initializer)
-static T t; T t(); // zero
+T t {};                       // zero initialization
+static T t; T t(); T t = T(); // zero initialization
 ```
 
 ### Overloads with ref-qualifier

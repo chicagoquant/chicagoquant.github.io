@@ -1,3 +1,68 @@
+# function template
+```cpp
+template<typename T>
+T max(T a, T b) { return b < a ? a : b; }
+
+// usage
+max(10, i)
+max(3.4, -7.6)
+max("hello", "world")
+
+
+template<typename T>
+auto max(T a, T b) { return b < a ? a : b; }    // return type deduced from return statements
+
+template<typename T1, typename T2>
+auto max(T1 a, T2 b) -> decltype(b<a?a:b)         // trailing return type
+{ return b < a ? a : b; }
+
+template<typename T1, typename T2>
+auto max(T1 a, T2 b) -> typename decay<decltype(b<a?a:b)>::type  // better, in case T1 or T2 is a reference type
+{ return b < a ? a : b; }
+
+// function overloads and templates
+int max(int a, int b);                          // non-template definition
+template<typename T> T max(T a, T b);           // pass by value? let the caller decide
+
+// let the caller decide if wants to pass by reference
+max(std::cref(s1), std::cref(s2));
+
+// overloading function templates
+template<typename T> int f(T);
+template<typename T> int f(T*);         // overload
+template<> int f(int);                  // full specialization
+```
+
+function templates can not be partially specialized, use overloading for that effect
+
+# class templates
+```cpp
+template<typename T>
+class Stack {
+    vector<T> items;
+
+    void push(T const& el);
+    ...
+};
+
+template<typename T> void Stack<T>::push(T const& el) { ... }
+
+template<>
+class Stack<std::string> { ... };          // full specialization
+
+template<typename T>
+class Stack<T*> { ... };                   // partial specialization
+
+template<typename T1, typename T2>
+class Foo {..};
+template<typename T>
+class Foo<T, int> {...};                   // partial specialization
+template<>
+class Foo<string, int> {...}               // full specialization
+```
+
+# basics
+
 ```cpp
 integral_constant<T, v>::value      // v
 integral_contant<bool, true>::value // true
