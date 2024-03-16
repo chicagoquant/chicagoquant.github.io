@@ -587,6 +587,18 @@ union;
 class; struct;
 ```
 
+POD - Plain Old Data
+
+- equivalent to C type, same rules for initialization, copying, layout and addressing
+- no constructors, no overloaded assignment operator
+- no virtual functions, base classes
+- no destructor
+- public non-static data members, but not private or protected are allowed
+- static data members allowed
+- static member functions allowed
+- non-static non-virtual member functions allowed
+- no references, no pointers-to-members
+
 ### Conversion between number and string
 
 `std::to_string()`, itoa, stringstream, boost lexical_cast, fmt library
