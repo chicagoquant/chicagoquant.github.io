@@ -784,6 +784,31 @@ while (ifs.peek() != EOF) {
 }
 ```
 
+#### Standard I/O
+```cpp
+int i;
+while (cin >> i) {
+  cout << i << endl;
+}
+
+constexpr auto maxval = std::numeric_limits<std::streamsize>::max();
+while (!cin >> i) {
+  cout << "invalid integer entered, try again" << endl;
+  cin.clear();
+  cin.ignore(maxval, '\n');
+}
+cout << i << endl;
+```
+
+#### cin states
+```cpp
+if (cin >> n)     // operator bool(), equiv to !fail()
+cin.eof() ||      // eof
+  cin.bad()       // non recoverable, internal failure
+cin.fail()        // any error, bad, eof, recoverable error, bad format data, eg not integer
+  -> cin.clear(), cin.ignore(maxval, delim='\n')
+```
+
 ### Structured binding
 
 ```cpp
