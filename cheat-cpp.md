@@ -58,6 +58,23 @@ int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 // flag: -Wno-unused
 ```
 
+## Small starting code
+```cpp
+#include <bits/stdc++.h>
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
+using namespace std;
+
+// int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
+int main(int argc, const char* argv[])
+// int main()
+{
+  return EXIT_SUCCESS;
+}
+```
+
 ## Header files for contests
 ```cpp
 #include <bits/stdc++.h>
@@ -544,6 +561,16 @@ vector<int> src;
 vector<int> dst;
 
 copy(src.begin(), src.end(), back_inserter(dst));
+```
+
+### transform vector
+```cpp
+vector<T1> v1;
+vector<T2> v2;
+
+T2 t1_to_t2(T1 p);
+
+transform(v1.begin(), v1.end(), back_inserter(v2), [](const auto& p1) -> T2 { return t1_to_t2(p1); });
 ```
 
 ### Copying
@@ -2452,7 +2479,48 @@ cout << clamp(12'000, low, high) << '\n';   // 12,000
 cout << clamp(-36'000, low, high) << '\n';  // -32,768
 cout << clamp(40'000, low, high) << '\n';   // 32,767
 ```
+### Generator Iterator protocol
 
+```cpp
+template<typename T>
+class Generator
+{
+  T curr;
+
+public:
+  using iterator_category = input_iterator_tag;
+  using value_type = T;
+  using difference_type = long;
+  using pointer = T*;
+  using reference = T&;
+
+  using const_pointer = const T*;
+  using const_reference = const T&;
+
+  explicit Generator(T t) : curr(t) {}
+  Generator& operator++() { ++curr; return *this; }
+  Generator operator++(int) { auto ret {*this}; this->operator++(); return ret; }
+  bool operator==(Generator other) const { return curr == other.curr; }
+  bool operator!=(Generator other) const { return !(*this == other); }
+  const_reference operator*() const { return curr; }
+  reference operator*() { return curr; }
+  const_pointer operator->() const { return &curr; }
+  pointer operator->() { return &curr; }
+};
+
+class MyRange
+{
+  int from, to;
+public:
+  MyRange(int from, int to) : from(from), to(to)
+  {
+  }
+
+  Generator<int> begin() { return Generator {from}; }
+  Generator<int> end() { return Generator {to}; }
+};
+
+```
 
 ## Templates
 
