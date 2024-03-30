@@ -2250,7 +2250,8 @@ transform
 
 ```cpp
 std::string s("hello");
-std::transform(s.cbegin(), s.cend(), s.begin(), [](char c) { return std::toupper(c); }};
+std::transform(s.cbegin(), s.cend(), s.begin(), [](char c) { return std::toupper(c); });
+std::transform(s.cbegin(), s.cend(), s.begin(), std::toupper);
 
 vector<int> ordinals;
 ordinals.reserve(s.size());
