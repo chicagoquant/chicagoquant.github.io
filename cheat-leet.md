@@ -463,13 +463,13 @@ bool next_permutation(BidirIt first, BidirIt last)
     auto r_first = std::make_reverse_iterator(last);
     auto r_last = std::make_reverse_iterator(first);
     auto left = std::is_sorted_until(r_first, r_last);
- 
+
     if (left != r_last)
     {
         auto right = std::upper_bound(r_first, left, *left);
         std::iter_swap(left, right);
     }
- 
+
     std::reverse(left.base(), last);
     return left != r_last;
 }
@@ -763,106 +763,135 @@ example problems:
 <details><summary>dynamic programming</summary>
 
 - fibonacci
-```cpp
-int memoized_fibo(int n) {
-  if (n == 0) { return 0; }
-  if (n == 1) { return 1; }
-  if (F[n] == invalid) {
-    F[n] = memoized_fibo(n-1) + memoized_fibo(n-2)
+  ```cpp
+  int memoized_fibo(int n) {
+    if (n == 0) { return 0; }
+    if (n == 1) { return 1; }
+    if (F[n] == invalid) {
+      F[n] = memoized_fibo(n-1) + memoized_fibo(n-2)
+    }
+    return F[n];
   }
-  return F[n];
-}
 
-/*
-memoized_fibo(5)          -> 8 => F[5]
-  memoized_fibo(4)        -> 5 => F[4]
-    memoized_fibo(3)      -> 3 => F[3]
-      memoized_fibo(2)    -> 2 => F[2]
-        memoized_fibo(1)  -> 1
-        memoized_fibo(0)  -> 0
-      memoized_fibo(1)    -> 1
-    memoized_fibo(2)      .. F[2] = 2
-      memoized_fibo(1)    x
-      memoized_fibo(0)    x
-  memoized_fibo(3)        .. F[3] = 3
-    memoized_fibo(2)      x
-      memoized_fibo(1)    x
-      memoized_fibo(0)    x
-    memoized_fibo(1)      x
-*/
-```
+  /*
+  memoized_fibo(5)          -> 8 => F[5]
+    memoized_fibo(4)        -> 5 => F[4]
+      memoized_fibo(3)      -> 3 => F[3]
+        memoized_fibo(2)    -> 2 => F[2]
+          memoized_fibo(1)  -> 1
+          memoized_fibo(0)  -> 0
+        memoized_fibo(1)    -> 1
+      memoized_fibo(2)      .. F[2] = 2
+        memoized_fibo(1)    x
+        memoized_fibo(0)    x
+    memoized_fibo(3)        .. F[3] = 3
+      memoized_fibo(2)      x
+        memoized_fibo(1)    x
+        memoized_fibo(0)    x
+      memoized_fibo(1)      x
+  */
+  ```
 
-```cpp
-int iterative_fibo(n) {
-  vector<int> F {n};
-  F[0] = 0;
-  F[1] = 1;
-  for (int i = 2; i <= n; ++i) {
-    F[i] = F[i-1] + F[i-2]; // we don't need to store these all
+  ```cpp
+  int iterative_fibo(n) {
+    vector<int> F {n};
+    F[0] = 0;
+    F[1] = 1;
+    for (int i = 2; i <= n; ++i) {
+      F[i] = F[i-1] + F[i-2]; // we don't need to store these all
+    }
+    return F[n];
   }
-  return F[n];
-}
 
-int better_iterative_fibo(n) {
-  int prev = 1;   // weird base case F[-1] = 1, so that fibo(0) = 0
-  int curr = 0;
-  for (int i = 1; i <= n; ++i) {
-    int next = curr + prev;
-    prev = curr;
-    curr = next;
+  int better_iterative_fibo(n) {
+    int prev = 1;   // weird base case F[-1] = 1, so that fibo(0) = 0
+    int curr = 0;
+    for (int i = 1; i <= n; ++i) {
+      int next = curr + prev;
+      prev = curr;
+      curr = next;
+    }
+    return curr;
   }
-  return curr;
-}
-```
+  ```
 
-- length of the longest increasing subsequence `A[1..n]`
+- (LIS) length of the longest increasing subsequence `A[1..n]`
 
-find the longest sequence of indices
+  Example: `LIS(CARBOHYDRATE) = ABORT`, `LIS(EMPATHY) = EMPTY`
 
-$$
-1 \le i_1 \lt i_2 \lt \cdots \lt i_l \le n\\
-\text{ s.t. } A[i_k] \lt A[i_{k+1}], \forall k
-$$
+  Goal: find the longest sequence of indices
 
-`LISbigger(prev, j)` - given 2 indices `prev < j`, find the longest increasing subsequence of `A[j..n]`, s.t. all its elements are larger than `A[prev]`
+  $$
+  1 \le i_1 \lt i_2 \lt \cdots \lt i_l \le n\\
+  \text{ s.t. } A[i_k] \lt A[i_{k+1}], \forall k
+  $$
 
-Compute `A[0] = INT_MIN; LISBigger(prev=0, j=1)`. i.e. we are looking for longest subsequence in `A[1..n]`, where `A[i] > INT_MIN` for all `i in [1..n]`
+  `LISbigger(prev, j)` - given 2 indices `prev < j`, find the longest increasing subsequence of `A[j..n]`, s.t. all its elements are larger than `A[prev]`
 
-$$
-\text{LISbigger}(i,j) =
-\left\{
-  \begin{array}{ll}
-  0 & \text{if } j > n \\
-  \text{LISbigger}(i, j+1) & \text{if } A[i] \ge A[j] \\
-  \text{max}(\text{LISbigger}(i, j+1), 1+\text{LISbigger}(j, j+1)) & \text{otherwise}
-  \end{array}
-\right.
-$$
+  Compute `A[0] = INT_MIN; LISBigger(prev=0, j=1)`. i.e. we are looking for longest subsequence in `A[1..n]`, where `A[i] > INT_MIN` for all `i in [1..n]`
 
-Another recurrence, longest increasing subsequence of `A[i..n]` that begins with `A[i]`
-$$
-\text{LISfirst}(i) = 1 + \max \left\{ \text{LISfirst}(j) | j > i \text{ and } A[j] > A[i] \right\}
-$$
+  $$
+  \text{LISbigger}(i,j) =
+  \left\{
+    \begin{array}{ll}
+    0 & \text{if } j > n \\
+    \text{LISbigger}(i, j+1) & \text{if } A[i] \ge A[j] \\
+    \text{max}(\text{LISbigger}(i, j+1), 1+\text{LISbigger}(j, j+1)) & \text{otherwise}
+    \end{array}
+  \right.
+  $$
 
-$O(N^2)$ algorithm
+  Another recurrence, longest increasing subsequence of `A[i..n]` that begins with `A[i]`
+  $$
+  \text{LISfirst}(i) = 1 + \max \left\{ \text{LISfirst}(j) | j > i \text{ and } A[j] > A[i] \right\}
+  $$
 
-```cpp
-int dp_lis(vector<int>& A, int N) {
-  A[0] = INT_MIN;       // sentinel
-  vector<int> LISfirst {N+1};
-  for (int i = N; i >= 0; --i) {
-    LISfirst[i] = 1;
-    for (int j = i+1; j < N; ++j) {
-      if (A[j] > A[i] && (1+LISfirst[j]) > LISfirst[i]) {
-        LISfirst[i] = 1 + LISfirst[j];
+  $O(N^2)$ algorithm
+
+  ```cpp
+  int dp_lis(vector<int>& A, int N) {
+    A[0] = INT_MIN;       // sentinel
+    vector<int> LISfirst (N+1, 1);
+    for (int i = N; i >= 0; --i) {
+      for (int j = i+1; j < N; ++j) {
+        if (A[j] > A[i]) {
+          LISfirst[i] = max(LISfirst[i], 1 + LISfirst[j]);
+        }
       }
     }
+    return LISfirst[0]-1;  // don't count the sentinel
   }
-  return LISfirst[0]-1;  // don't count the sentinel
-}
-```
+  ```
 
-- longest common subsequence, given 2 strings, find longest subsequence, by dropping some characters from the strings
+- (LCS) longest common subsequence, given 2 strings, find longest subsequence, by dropping some characters from the strings, `LCS(A, B)`
+
+  Example: `LCS(HIEROGLYPHOLOGY, MICHAELANGELO) = HELLO / HEGLO / IELLO / IEGLO`, `LCS(HABIT, THEIRS) = HI`
+
+  Subproblem:
+  $$
+  \text{LCS(A[i:], B[j:])} = \begin{cases}
+  \max \left\{ \text{LCS(A[i+1:], B[j:])}, \text{LCS(A[i:], B[j+1:])} \right\} & \text{if } \text{A[i]} \ne \text{B[j]} \\
+  1 + \text{LCS(A[i+1:], B[j+1:])} & \text{when A[i] } = \text{B[j]}
+  \end{cases}
+  $$
+
+  Base cases: $\text{LCS}(A, \empty) = 0, \text{LCS}(\empty, B) = 0$
+
+  Complexity: $O(|A| \times |B|)$
+
+  ```python
+  def LCS(A,B):
+    a, b = len(A), len(B)
+    x = [ [0] * (b+1) for _ in range(a+1) ]
+    for i in reversed(range(a)):
+      for j in reversed(range(b)):
+        if A[i] == B[j]:
+          x[i][j] = 1 + x[i+1][j+1]
+        else:
+          x[i][j] = max(x[i+1][j], x[i][j+1])
+    return x[0][0]
+  ```
+
 - longest common substring, can not drop characters
 - longest palindromic sequence, can reorder characters and drop some
 - longest repeating subsequence
@@ -881,8 +910,9 @@ int dp_lis(vector<int>& A, int N) {
 - coin change minimum problem
 - coin change ways
 
-</details>
+Eric Demaine: DP1 (merge_sort, fibonacci, bowling), DP2 (LCS, LIS, Coins)
 
+</details>
 
 <details><summary>divide and conquer</summary></details>
 
