@@ -200,3 +200,35 @@ cout << contains_type<float, decltype(types)>::value << endl;   // false
 // See: https://github.com/QBouts/BitsOfQ/blob/master/Metaprogramming/
 // See: https://www.youtube.com/watch?v=vff3qCO2SQA&list=PLWxziGKTUvQFIsbbFcTZz7jOT4TMGnZBh&index=5
 ```
+
+Power of a number
+```cpp
+template<int m, int n>
+struct Power {
+    constexpr static int const value = m * Power<m, n-1>::value;
+};
+
+template<int m>
+struct Power<m, 0> {
+    constexpr static int const value = 1;
+};
+
+static_assert(Power<2, 10>::value == 1024);
+```
+
+hybrid, not pure compile time
+```cpp
+template<int n>
+constexpr int power(int m) {
+    return m * power<n-1>(m);
+}
+
+template<>
+constexpr int power<0>(int /* unused */) {
+    return 1;
+}
+
+static_assert(power<10>(2) == 1024);
+
+int k = power<10>(2); // 1024
+```

@@ -674,6 +674,11 @@ if (res.ec == no_error) {
   cout << string_view(out.data(), res.ptr) << endl;
 }
 
+// string -> int, using from_chars defined in <charconv>
+string s { "1999" };
+int num {0};
+std::from_chars(s.data(), s.data()+s.size(), num);
+
 #include <format>
 #include <string>
 string s = std::format("{}", n);
@@ -789,8 +794,8 @@ while (getline(ss, line)) {
 istringstream ss(csv_data);
 string record;
 while (ss.peek() != EOF) {        // std::char_traits<char>::eof()
-    getline(ss, record, ',');
-    cout << record << endl;
+  getline(ss, record, ',');
+  cout << record << endl;
 }
 ```
 
@@ -803,11 +808,11 @@ while (ss.peek() != EOF) {        // std::char_traits<char>::eof()
 ifstream ifs;
 ifs.open(filepath);
 if (ifs.fail()) {
-    // error
+  // error
 }
 string line;
 while (ifs.peek() != EOF) {
-    getline(ifs, line);
+  getline(ifs, line);
 }
 ```
 
@@ -1864,6 +1869,62 @@ cout << sv << endl;
 string_view sv(s.begin(), s.end()); // s is a std::string
 ```
 
+### std string
+```cpp
+string s { "hello" };
+
+size_t beg = 0;
+size_t i = s.find('l', beg);
+i != string::npos;
+string s2 = s.substr(beg, i-beg);
+
+auto it = find(s.begin(), s.end(), 'l');
+it != s.end();
+size_t count = it-s.begin();
+size_t beg = 0;
+string s2 = s.substr(beg, count);
+
+string to_upper(string s)
+{
+  transform(s.cbegin(), s.cend(), s.begin(), toupper);
+  return s;
+}
+
+string reverse_str(string s)
+{
+  std::reverse(s.begin(), s.end());
+  return s;
+}
+
+string ltrim(string s) {
+  s.erase(
+    s.begin(),
+    find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace)))
+  );
+  return s;
+}
+
+string rtrim(string s) {
+  s.erase(
+    find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(),
+    s.end()
+  );
+  return s;
+}
+
+string trim(string s) {
+  s.erase(
+    find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(),
+    s.end()
+  );
+  s.erase(
+    s.begin(),
+    find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace)))
+  );
+  return s;
+}
+```
+
 ### std span
 
 span is a generalized string_view, can be used for other range types, not just strings. for view of a contiguous sequence of data.
@@ -2614,6 +2675,46 @@ void f(T x) { ... }
 
 SomeTypeThatSatisfiesConceptName y;
 f(y);
+```
+
+### How to define a concept?
+```cpp
+template<typename T>
+concept arithmetic = std::is_arithmetic_v<T>;
+
+// equivalent to
+
+template<typename T>
+concept arithmetic = requires {
+  std::is_arithmetic_v<T>;
+};
+
+template<arithmetic T>           <<-- notice arithmetic concept
+T add(T const a, T const b) { return a+b; }
+```
+
+Is type a container?
+```cpp
+template<typename T>
+concept container = requires(T t) {
+  typename T::value_type;
+  typename T::size_type;
+  typename T::allocator_type;
+  typename T::iterator;
+  typename T::const_iterator;
+  t.size();
+  t.begin();
+  t.end();
+  t.cbegin();
+  t.cend();
+};
+
+struct foo {};
+static_assert(container<std::vector<foo>>);
+static_assert(!container<foo>);
+
+template<container C>
+void process(C&& c) {}
 ```
 
 ## Print type name
