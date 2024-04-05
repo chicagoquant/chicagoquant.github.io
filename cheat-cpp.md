@@ -48,6 +48,9 @@ auto print_elem = [](auto const e) {std::cout << e << '\n'; };
 
 int main([[maybe_unused]]int argc, [[maybe_unused]] const char* argv[])
 {
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie(NULL);
+
     cout << boolalpha; // so that it prints boolean values as true/false
     auto s = "hello"s;
     cout << s << endl;
@@ -71,6 +74,9 @@ using namespace std;
 int main(int argc, const char* argv[])
 // int main()
 {
+  std::ios_base::sync_with_stdio(false);
+  std::cin.tie(NULL);
+
   return EXIT_SUCCESS;
 }
 ```

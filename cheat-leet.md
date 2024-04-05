@@ -154,6 +154,7 @@ Is keeping `max_h` not sufficient? why do people keep track of `left_max_h` and 
 
 # Concepts
 
+## Graphs, Trees
 <details> <summary>Graphs, Trees</summary>
 
 graph - vertex, edge
@@ -189,6 +190,17 @@ right_child(i) = 2*i + 1;           // right child of i-th node
 ```
 </details>
 
+Shortest Path
+
+Single Source Shortest Path (SSSP) in DAG
+
+Single Source Shortest Path (SSSP) in General Graphs (Bellman Ford)
+
+All Pairs Shortest Path (APSP) in General Graphs $O(V^4)$
+
+All Pairs Shortest Path (APSP) in General Graphs (Floyd Warshall) $O(V^3)$
+
+## Verify binary search tree (in-order dfs)
 <details> <summary>Verify binary search tree (in-order dfs)</summary>
 
 In-order dfs, check prev node is less
@@ -246,6 +258,7 @@ bool recursive_is_bst(TreeNode* root, TreeNode* &prev)
 ```
 </details>
 
+## verify tree is balanced
 <details><summary>verify tree is balanced</summary>
 
 verify:
@@ -278,6 +291,8 @@ optional<int> recursive_is_balanced(TreeNode* root)
 ```
 
 </details>
+
+## Lowest common ancestor
 
 <details><summary>find lowest common ancestor of 2 nodes in a tree</summary>
 
@@ -316,6 +331,8 @@ TreeNode* find_lca(TreeNode* root, Data p, Data q)
 ```
 </details>
 
+## Binary Search Tree
+
 <details><summary>sorted array to binary search tree</summary>
 
 ```cpp
@@ -339,6 +356,24 @@ TreeNode* recursive_sorted_array_to_bst(const vector<int>& A, int l, int r)
 
 ```
 </details>
+
+## Backtracking
+
+<details><summary>backtracking</summary>
+
+backtracking -- to enumerate all states, bound function check to prune the tree to optimize
+- feasible solution to a decision problem -- whether true / false?
+- solve optimization problems
+- enumerate all feasible solutions
+
+example problems:
+- n queen placement
+- all subsets of numbers, that sum up to a target T
+- graph coloring: minimum colors to color a graph
+- hamiltonian path (from S to T, visits all the vertices of the graph)
+</details>
+
+### Backtracking - combinations
 
 <details><summary>(backtracking) combinations - K numbers from 1..N</summary>
 
@@ -415,6 +450,8 @@ void kCombination(int index, int start, int end, int K, vector<int>& temp, vecto
 }
 ```
 </details>
+
+### Backtracking - permutations
 
 <details><summary>(backtracking) permutations</summary>
 
@@ -527,6 +564,8 @@ void recursive_heaps_permutations(vector<int>& A, int n)
 }
 ```
 </details>
+
+## Graphs - Union Find
 
 <details><summary>Graphs - Union-Find API, Connected Components</summary>
 
@@ -698,6 +737,8 @@ void dfs_connected(int v, int component_id, Graph& G, vector<bool>& visited, vec
 
 </details>
 
+## Graphs - Topological Sort
+
 <details><summary>Graphs - Topological Sort (postorder dfs) on a DAG</summary>
 
 ```cpp
@@ -746,22 +787,10 @@ traversal. Further traversals will be needed if there are still unvisited vertic
 
 </details>
 
-<details><summary>backtracking</summary>
-
-backtracking -- to enumerate all states, bound function check to prune the tree to optimize
-- feasible solution to a decision problem -- whether true / false?
-- solve optimization problems
-- enumerate all feasible solutions
-
-example problems:
-- n queen placement
-- all subsets of numbers, that sum up to a target T
-- graph coloring: minimum colors to color a graph
-- hamiltonian path (from S to T, visits all the vertices of the graph)
-</details>
-
+## Dynamic Programming
 <details><summary>dynamic programming</summary>
 
+### Fibonacci
 - fibonacci
   ```cpp
   int memoized_fibo(int n) {
@@ -815,6 +844,8 @@ example problems:
   }
   ```
 
+### LIS
+
 - (LIS) length of the longest increasing subsequence `A[1..n]`
 
   Example: `LIS(CARBOHYDRATE) = ABORT`, `LIS(EMPATHY) = EMPTY`
@@ -829,6 +860,8 @@ example problems:
   `LISbigger(prev, j)` - given 2 indices `prev < j`, find the longest increasing subsequence of `A[j..n]`, s.t. all its elements are larger than `A[prev]`
 
   Compute `A[0] = INT_MIN; LISBigger(prev=0, j=1)`. i.e. we are looking for longest subsequence in `A[1..n]`, where `A[i] > INT_MIN` for all `i in [1..n]`
+
+  See UIUC Algo course notes: [CS 473](https://courses.engr.illinois.edu/cs473/fa2019/lectures/lecture6.handout.pdf)
 
   $$
   \text{LISbigger}(i,j) =
@@ -863,6 +896,24 @@ example problems:
   }
   ```
 
+  [16. Dynamic Programming, Part 2: LCS, LIS, Coins](https://youtu.be/KLBCUx1is2c?t=1310)
+
+  ```python
+  # https://www.youtube.com/watch?v=KLBCUx1is2c
+  # https://learning-modules.mit.edu/materials/index.html?uuid=/course/6/sp20/6.006#materials
+  # lecture 16
+  def lis(A):
+    a = len(A)
+    x = [1] * a
+    for i in reversed(range(a)):
+      for j in range(i, a):
+        if A[j] > A[i]:
+          x[i] = max(x[i], 1+x[j])
+    return max(x)
+  ```
+
+### LCS
+
 - (LCS) longest common subsequence, given 2 strings, find longest subsequence, by dropping some characters from the strings, `LCS(A, B)`
 
   Example: `LCS(HIEROGLYPHOLOGY, MICHAELANGELO) = HELLO / HEGLO / IELLO / IEGLO`, `LCS(HABIT, THEIRS) = HI`
@@ -892,6 +943,42 @@ example problems:
     return x[0][0]
   ```
 
+### Alternating Coin Game
+
+- alternating coin game https://www.youtube.com/watch?v=KLBCUx1is2c&t=2564s
+
+  $X(i,j,\text{player}=p)$ is my max value playing from coins $v_i, \ldots, v_j$ where player $p \in \{me, you\}$ moves first
+
+  $$
+  X(i, j, me) = \max \left\{ v_i + X(i+1, j, you), v_j + X(i, j-1, you) \right\} \\
+  X(i, j, you) = \min \left\{ X(i+1, j, me), v_j + X(i, j-1, me) \right\} \\
+  X(i, i, me) = v_i \\
+  X(i, i, you) = 0
+  $$
+
+  Goal: $X(0, n-1, me)$, in $O(n^2)$
+
+  ```python
+  def max_wins(v):
+      n = len(v)
+      me, you = 0, 1
+      X = [ [ [0, 0] for i in range(n) ] for j in range(n) ]
+      for i in range(n):
+          X[i][i][me] = v[i]
+          X[i][i][you] = 0
+
+      for i in reversed(range(n-1)):
+          for j in range(i+1, n):
+              print(i, j)
+              X[i][j][me] = max(v[i] + X[i+1][j][you], v[j] + X[i][j-1][you])
+              X[i][j][you] = min(X[i+1][j][me], X[i][j-1][me])
+
+      return X[0][n-1][me]
+  print(max_wins([5, 10, 100, 25]))
+  # 105
+  ```
+
+### More DP problems (unsolved)
 - longest common substring, can not drop characters
 - longest palindromic sequence, can reorder characters and drop some
 - longest repeating subsequence
@@ -910,9 +997,13 @@ example problems:
 - coin change minimum problem
 - coin change ways
 
-Eric Demaine: DP1 (merge_sort, fibonacci, bowling), DP2 (LCS, LIS, Coins)
+Eric Demaine:
+  - DP1 (merge_sort, fibonacci, bowling),
+  - DP2 (LCS, LIS, Alternate Coin Game)
 
 </details>
+
+## Rest
 
 <details><summary>divide and conquer</summary></details>
 
