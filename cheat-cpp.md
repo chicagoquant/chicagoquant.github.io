@@ -2590,6 +2590,57 @@ public:
 
 ```
 
+### Transform Iterator
+
+```cpp
+template<typename Inner>
+struct Wrap
+{
+    Wrap(const Inner& inner) : m_inner { inner }
+    {}
+
+    Inner m_inner;
+};
+
+template<typename It, typename Func>
+class transform_iterator : Wrap<Func>
+{
+    It m_it;
+public:
+    transform_iterator(const It& it, const Func& f) : m_it(it), Wrap<Func>(f)
+    {
+    }
+
+    // copy constructors and assignment operators defaulted
+    using difference_type = typename std::iterator_traits<It>::difference_type;
+    using value_type = typename std::invoke_result<Func, It>::type;
+    using pointer = void;
+    using reference = void;
+    using iterator_category = std::input_iterator_tag;
+
+    bool operator==(transform_iterator const& other)
+    { return m_it == other.m_it; }
+    bool operator!=(transform_iterator const& other)
+    { return m_it != other.m_it; }
+
+    auto operator*() const { return (*this)(*m_it); }
+
+    auto operator++() { ++m_it; return *this; }
+    auto operator++(int)
+    { auto prev = *this; ++m_it; return prev; }
+};
+
+// For C++14 (no CTAD)
+template<typename It, typename Func>
+auto make_transform_iterator(
+    It const& it, Func const& f)
+{
+    return transform_iterator<It, Func>(it, f);
+}
+
+Source: https://devblogs.microsoft.com/oldnewthing/20230523-00/?p=108233
+```
+
 ## Templates
 
 - ellipsis opertor
