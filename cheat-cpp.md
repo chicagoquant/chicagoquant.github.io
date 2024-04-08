@@ -1,5 +1,7 @@
 # Competitive programming
 
+[what is new in C++20](https://en.cppreference.com/w/cpp/20) [working examples](https://github.com/makelinux/examples/blob/HEAD/cpp/20.cpp)
+
 [github-repo](https://github.com/chicagoquant/chicagoquant.github.io/) [self](https://github.com/chicagoquant/chicagoquant.github.io/blob/main/cheat-cpp.md)
 
 ## Starting point
@@ -2303,6 +2305,49 @@ sort(v.rbegin(), v.rend()); // reverse order sort
 sort(v.begin(), v.end(), greater<int>()); // in decreasing order
 ```
 
+#### insert in sorted vector
+
+`it = upper_bound(b, e, v[, pred=less])` - returns first element in the range that is greater than "v" (`pred(v, *it) = true`).
+`[b, it)` is ordered after "v", ie, `pred(v, *it)`
+
+
+`it = lower_bound(b, e, v[, pred=less])` - returns first element in the range that is not less than "v" (`pred(*it, v) = false`).
+`[b, it)` is not ordered before "v", ie, `not pred(*it, v)`
+
+
+```text
+        [ 1, 2, 3, 3, 3, 4, 5 ]
+                ^        ^
+          0  1  2  3  4  5  6  7
+
+lower_bound(b, e, 3) == 2
+upper_bound(b, e, 3) == 5
+```
+
+```cpp
+template< typename T, typename Pred >
+typename std::vector<T>::iterator
+insert_sorted( std::vector<T> & vec, T const& item, Pred pred )
+{
+    return vec.insert
+        (
+           std::upper_bound( vec.begin(), vec.end(), item, pred ),
+           item
+        );
+}
+
+template< typename T >
+typename std::vector<T>::iterator
+insert_sorted( std::vector<T> & vec, T const& item )
+{
+    return vec.insert
+        (
+            std::upper_bound( vec.begin(), vec.end(), item ),
+            item
+        );
+}
+```
+
 ### sum of vector
 
 ```cpp
@@ -2593,50 +2638,76 @@ public:
 ### Transform Iterator
 
 ```cpp
-template<typename Inner>
-struct Wrap
-{
-    Wrap(const Inner& inner) : m_inner { inner }
-    {}
-
-    Inner m_inner;
-};
-
 template<typename It, typename Func>
-class transform_iterator : Wrap<Func>
+class transform_iterator
 {
+    Func m_inner;
     It m_it;
+
 public:
-    transform_iterator(const It& it, const Func& f) : m_it(it), Wrap<Func>(f)
+    transform_iterator(It&& it, Func&& f) : m_inner(std::forward<Func>(f)), m_it(std::forward<It>(it))
     {
     }
 
-    // copy constructors and assignment operators defaulted
+    using iterator_category = typename It::iterator_category;
+    using value_type = typename std::invoke_result<Func, typename It::value_type>::type;
     using difference_type = typename std::iterator_traits<It>::difference_type;
-    using value_type = typename std::invoke_result<Func, It>::type;
-    using pointer = void;
-    using reference = void;
-    using iterator_category = std::input_iterator_tag;
+    using pointer = value_type*;
+    using reference = value_type&;
 
-    bool operator==(transform_iterator const& other)
-    { return m_it == other.m_it; }
-    bool operator!=(transform_iterator const& other)
-    { return m_it != other.m_it; }
+    bool operator==(transform_iterator const& other) { return m_it == other.m_it; }
+    bool operator!=(transform_iterator const& other) { return m_it != other.m_it; }
 
-    auto operator*() const { return (*this)(*m_it); }
+    const auto operator*() const { return m_inner(*m_it); }
+    auto operator*() { return m_inner(*m_it); }
 
-    auto operator++() { ++m_it; return *this; }
-    auto operator++(int)
-    { auto prev = *this; ++m_it; return prev; }
+    auto operator++()       { ++m_it; return *this; }
+    auto operator++(int)    { auto prev = *this; ++m_it; return prev; }
+
+    auto operator--()       { --m_it; return *this; }
+    auto operator--(int)    { auto prev = *this; --m_it; return prev; }
+
+    auto operator+=(std::iter_difference_t<It> n)   { m_it.operator+=(n); return *this; }
+
+    difference_type operator-(const transform_iterator& it) { return m_it-it.m_it; }
 };
 
 // For C++14 (no CTAD)
 template<typename It, typename Func>
-auto make_transform_iterator(
-    It const& it, Func const& f)
+auto make_transform_iterator(It&& it, Func&& f)
 {
-    return transform_iterator<It, Func>(it, f);
+    return transform_iterator<It, Func>(std::forward<It>(it), std::forward<Func>(f));
 }
+
+template<typename It, typename Func>
+auto make_transform_iterator_pair(It&& it1, It&& it2, Func&& f)
+{
+    return tuple {
+        transform_iterator<It, Func>(std::forward<It>(it1), std::forward<Func>(f)),
+        transform_iterator<It, Func>(std::forward<It>(it2), std::forward<Func>(f))
+    };
+}
+
+struct A {
+    int a, b, c, d;
+};
+
+int g(A a) { return a.d; }
+auto f = [](const A& a) { return a.d; };
+
+vector<A> aa {
+    { 1, 4, 2, 3, },
+    { 2, 3, 4, 1, },
+    { 5, 5, 5, 5, },
+    { 3, 9, 8, 2, },
+};
+
+auto it = make_transform_iterator(aa.begin(), g);
+cout << *it << endl;
+
+auto [b, e] = make_transform_iterator_pair(aa.begin(), aa.end(), f);
+vector<int> bb(b, e);
+copy(bb.begin(), bb.end(), ostream_iterator<int>(cout, "\n"));
 
 Source: https://devblogs.microsoft.com/oldnewthing/20230523-00/?p=108233
 ```
