@@ -200,6 +200,88 @@ All Pairs Shortest Path (APSP) in General Graphs $O(V^4)$
 
 All Pairs Shortest Path (APSP) in General Graphs (Floyd Warshall) $O(V^3)$
 
+## Tree traversal
+
+
+```cpp
+void preorder(TreeNode* root)               |   void iterativePreorder(TreeNode* root)
+{                                           |   {
+  if (root == nullptr) { return; }          |       if (root == nullptr) return;
+                                            |       stack<TreeNode*> tree_stack;
+  process(root->value);                     |       TreeNode* curr;
+                                            |       tree_stack.push(root);
+  preorder(root->left);                     |       while (!tree_stack.empty()) {
+  preorder(root->right);                    |           curr = tree_stack.top();
+}                                           |           tree_stack.pop();
+                                            |           process(curr->value);
+                                            |           if (curr->right) { tree_stack.push(curr->right); }
+                                            |           if (curr->left)  { tree_stack.push(curr->left); }
+                                            |       }
+                                            |   }
+                                            |
+void inorder(TreeNode* root)                |   void iterativeInorder(TreeNode* root)
+{                                           |   {
+  if (root == nullptr) { return; }          |       if (root == nullptr) return;
+                                            |       stack<TreeNode*> tree_stack;
+  inorder(root->left);                      |       TreeNode* curr = root;
+                                            |       while (!tree_stack.empty() || curr != nullptr) {
+  process(root->value);                     |           if (curr != nullptr) {
+                                            |               tree_stack.push(curr);
+  inorder(root->right);                     |               curr = curr->left;
+}                                           |           }
+                                            |           else {
+                                            |               curr = tree_stack.top();
+                                            |               tree_stack.pop();
+                                            |               process(curr->value);
+                                            |               curr = curr->right;
+                                            |           }
+                                            |       }
+                                            |   }
+                                            |
+void postorder(TreeNode* root)              |   void postorderTraversalSingleStack(TreeNode* root)
+{                                           |   {
+  if (root == nullptr) { return; }          |       if (root == nullptr) return;
+                                            |       stack<TreeNode*> tree_stack;
+  postorder(root->left);                    |       TreeNode* prev = nullptr;
+  postorder(root->right);                   |       while (root || !tree_stack.empty()) {
+  process(root->value);                     |           if (root) {
+}                                           |               tree_stack.push(root);
+                                            |               root = root->left;
+                                            |           }
+                                            |           else {
+                                            |               TreeNode* curr = tree_stack.top();
+                                            |               if (curr->right && curr->right != prev) {
+                                            |                   root = curr->right;
+                                            |               }
+                                            |               else {
+                                            |                   process(curr->value);
+                                            |                   prev = curr;
+                                            |                   tree_stack.pop();
+                                            |               }
+                                            |           }
+                                            |       }
+                                            |   }
+```
+
+BFS
+
+```cpp
+void iterativeLevelOrder(TreeNode* root)
+{
+    if (root == nullptr) { return; }
+    queue<TreeNode*> q;
+    q.push(root);
+    while (!q.empty()) {
+        TreeNode* curr = q.front();
+        q.pop();
+        process(curr->value);
+        if (curr->left)  { q.push(curr->left); }
+        if (curr->right) { q.push(curr->right); }
+    }
+}
+```
+
+
 ## Verify binary search tree (in-order dfs)
 <details> <summary>Verify binary search tree (in-order dfs)</summary>
 

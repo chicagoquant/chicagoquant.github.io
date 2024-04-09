@@ -2987,6 +2987,127 @@ fut.wait();
 
 ## Synchronization
 
+- Mutex: `mutex`
+- Lock Guard: `lock_guard<mutex>`, `unique_lock<mutex>`
+- Condition Variable
+- Semaphore
+- Synchronized Queue
+  ```cpp
+  deque<packaged_task<int()>> Q;
+  mutex q_mut;
+  condition_variable q_condvar;
+
+  thread_do_work()
+  {
+    packaged_task<int()> t;
+    {
+      unique_lock<mutex> q_lock(q_mut);
+      q_condvar.wait(q_lock, [] { return !Q.empty(); });
+      t = move(Q.front());
+      Q.pop_front();
+    }
+    t(); // call the received callable
+  }
+
+  int long_job();
+
+  int main()
+  {
+    thread t1(thread_do_work);
+    packaged_task<int()> t (long_job);
+    future<int> f = t.get_future();
+    {
+      unique_lock<mutex> q_lock(q_mut);
+      Q.push_back(move(t));
+    }
+    q_condvar.notify_one(); // only 1 thread is waiting, so notify_one
+    auto result = f.get();
+    t1.join();
+
+    return EXIT_SUCCESS;
+  }
+  ```
+
+- Synchronized Queue
+  ```cpp
+  template<typename T, typename Container = deque<T>>
+  class SynchQueue : Container
+  {
+    mutex mtx;
+    bool stopped = false;
+  public:
+    condition_variable cv;
+
+    void push(T&& v) {
+      lock_guard<mutex> { mtx }, Container::push(v);
+      cv.notify_one();
+    }
+
+    T& pull() {
+      unique_lock<mutex> lk(mtx);
+      cv.wait(lk, [&] { return !this->empty() || stopped; });
+      if (stopped) { throw "stopped"; }
+      T& ret = Container::front();
+      this->pop();
+      return ret;
+    }
+
+    void stop() {
+      stopped = true;
+      cv.notify_all();
+    }
+  };
+
+  struct Interface
+  {
+    virtual void method() = 0;
+    virtual ~Interface() noexcept = default;
+  };
+
+  struct ActiveObject : Interface
+  {
+    using Command = function<void()>;
+    Interface& subject;
+    SynchronizedQueue<Command> cmd_q;
+    thread th;
+
+    ActiveObject(Interface& s) : subject(s) {
+      th = thread([this] {
+        try {
+          while (true)
+            cmd_q.pull()();
+        }
+        catch(...) {
+        }
+      });
+    }
+
+    ~ActiveObject() noexcept {
+      cmd_q.stop();
+      th.join();
+    }
+
+    int method() override {
+      promise<int> p;
+      future f = p.get_future();
+      cmd_q.push([&p, this] { p.set_value(subject.method()); });
+      auto status = f.wait_for(1s);
+      if (status != future_status::ready) { throw status; }
+      return f.get();
+    }
+  };
+
+  struct SampleProduct : Interface {
+    int data;
+    int method() override { return data; }
+    SampleProduct(int d = 0) : data(d) {}
+  };
+
+  SampleProduct sp(3);
+  ActiveObject ao(sp);
+  auto result = ao.method();
+  ```
+
 ### Mutex lock
 ```cpp
 #include <mutex>
