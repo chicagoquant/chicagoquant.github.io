@@ -2412,7 +2412,9 @@ inclusive_scan(                                           // new, parallelizable
 */
 ```
 
-see also: `exclusive_scan`, `transform_inclusive_scan`, `transform_exclusive_scan`
+see also: `exclusive_scan`, which exclude ith item from the prefix sum.
+
+see also: `transform_inclusive_scan`, `transform_exclusive_scan`, apply a transformation before doing the prefix sum.
 
 ### std ranges
 ```cpp
@@ -4810,3 +4812,4 @@ Ice Lake: [CPU Benchmark](https://www.7-cpu.com/cpu/Ice_Lake.html)
 - Ref: Alder Lake, Intel Core i3-N305 @ 1.8 GHz, Core 8, Threads 8, 8 GB, L1 48KB, L2 512KB, L3 16MB, PCIe 3,
 
 
+- Launder
