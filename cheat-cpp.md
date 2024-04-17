@@ -3938,7 +3938,7 @@ Even though these time functions ultimately end up making a system call, these s
 auto tick = std::chrono::high_resolution_clock::now();
 do_work();
 auto tock = std::chrono::high_resolution_clock::now();
-auto elapsed_secs = std::chrono::duration_cast<std::chrono::duration<double>>(tock - tick)).count();
+auto elapsed_secs = std::chrono::duration_cast<std::chrono::duration<double>>(tock - tick).count();
 
 // other clocks -- high_resolution_clock, system_clock
 // system_clock -> measures realtime == wallclock time

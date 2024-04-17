@@ -23,7 +23,8 @@
 | Smarket | Smarket.csv |
 | Weekly | Weekly.csv |
 
-# Ch 2
+# Ch 2 -- Statistical Learning
+
 ```python
 print('fit a model with', 11, 'variables')
 
@@ -344,7 +345,8 @@ Auto['cylinders'].describe()
 Auto['mpg'].describe()
 ```
 
-# Ch 3
+# Ch 3 -- Linear Regression
+
 ```python
 import numpy as np
 import pandas as pd
@@ -506,3 +508,23 @@ summarize(model.fit())
 
 
 ```
+
+# Ch 4 -- Classification
+
+# Ch 5 -- Resampling Methods
+
+# Ch 6 -- Linear Model Selection and Regularization
+
+# Ch 7 -- Moving Beyond Linearity
+
+# Ch 8 -- Tree Based Methods
+
+# Ch 9 -- SVM
+
+# Ch 10 -- Deep Learning
+
+# Ch 11 -- Survival Analysis and Censored Data
+
+# Ch 12 -- Unsupervised Learning
+
+# Ch 13 -- Multiple Testing
