@@ -76,10 +76,10 @@ using namespace std;
 int main(int argc, const char* argv[])
 // int main()
 {
-  std::ios_base::sync_with_stdio(false);
-  std::cin.tie(NULL);
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie(NULL);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 ```
 
@@ -123,42 +123,42 @@ using namespace std;
 
 class A {
 public:
-  // default
-  A() { cout << "A::default ctor(this=" << this << ")\n"; }
-  ~A() { cout << "A::dtor(this=" << this << ")\n"; }
-  // A(T x) : data_(move(x))
-  // { cout << "A::conversion ctor(this=" << this << ", x=" << &x << ")\n"; }
-  // operator T() const { return data_; }   // conversion-function, can specify explicit
-  A(A const& rhs) { cout << "A::copy ctor(this=" << this << ", const A& rhs=" << &rhs << ")\n"; }
-  A(A&& rhs) noexcept { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
+    // default
+    A() { cout << "A::default ctor(this=" << this << ")\n"; }
+    ~A() { cout << "A::dtor(this=" << this << ")\n"; }
+    // A(T x) : data_(move(x))
+    // { cout << "A::conversion ctor(this=" << this << ", x=" << &x << ")\n"; }
+    // operator T() const { return data_; }   // conversion-function, can specify explicit
+    A(A const& rhs) { cout << "A::copy ctor(this=" << this << ", const A& rhs=" << &rhs << ")\n"; }
+    A(A&& rhs) noexcept { cout << "A::move ctor(this=" << this << ", A&& rhs=" << &rhs << ")\n"; }
 
-  // A& operator=(A const& rhs) { cout << "A::copy assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
-  // A& operator=(A&& rhs) noexcept { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
+    // A& operator=(A const& rhs) { cout << "A::copy assignment(this=" << this << ") = " << &rhs << "\n"; return *this; }
+    // A& operator=(A&& rhs) noexcept { cout << "A::move assignment(this=" << this << ") = " << &rhs << "\n"; rhs.swap(*this); return *this; }
 
-  // replaces above 2 assignment operators
-  A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; swap(*this, rhs); return *this; }
+    // replaces above 2 assignment operators
+    A& operator=(A rhs) noexcept { cout << "A::copy_val assignment(this=" << this << ") = " << &rhs << "\n"; swap(*this, rhs); return *this; }
 
-  // replaces both A::swap(b), std::swap(a, b)
-  friend void swap(A& a, A& b) noexcept {
-    cout << "friend swap(A& a=" << &a << ", A& b=" << &b << ")" << endl;
-    //
-    // // argument dependent lookup (ADL) rules will prefer a more specific swap,
-    // // if nothing specific available, will fallback to std::swap
-    // // member1.swap(b.member1);
-    // // or swap(member1, b.member1)
-    // // or std::swap(a.member1, b.member1);
-    //
-    // using std::swap;         // allow ADL
-    // swap(pointerMember, b.pointerMember);
-    // swap(basicTypeMember, b.basicTypeMember);
-  }
+    // replaces both A::swap(b), std::swap(a, b)
+    friend void swap(A& a, A& b) noexcept {
+        cout << "friend swap(A& a=" << &a << ", A& b=" << &b << ")" << endl;
+        //
+        // // argument dependent lookup (ADL) rules will prefer a more specific swap,
+        // // if nothing specific available, will fallback to std::swap
+        // // member1.swap(b.member1);
+        // // or swap(member1, b.member1)
+        // // or std::swap(a.member1, b.member1);
+        //
+        // using std::swap;         // allow ADL
+        // swap(pointerMember, b.pointerMember);
+        // swap(basicTypeMember, b.basicTypeMember);
+    }
 
-  // void swap(A& b) noexcept {
-  //   cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
-  //   // using std::swap;      // allow ADL
-  //   // swap(pointerMember, b.pointerMember);
-  //   // swap(basicTypeMember, b.basicTypeMember);
-  // }
+    // void swap(A& b) noexcept {
+    //   cout << "A::swap(this=" << this << ", A& b=" << &b << ")" << endl;
+    //   // using std::swap;      // allow ADL
+    //   // swap(pointerMember, b.pointerMember);
+    //   // swap(basicTypeMember, b.basicTypeMember);
+    // }
 };
 
 // namespace std {
@@ -171,10 +171,10 @@ public:
 
 class B : public A {
 public:
-  B() { cout << "B::default ctor(this=" << this << ")\n"; }
-  ~B() { cout << "B::dtor(this=" << this << ")\n"; }
+    B() { cout << "B::default ctor(this=" << this << ")\n"; }
+    ~B() { cout << "B::dtor(this=" << this << ")\n"; }
 
-  void foo() { cout << "B::foo(this=" << this << ")\n"; }
+    void foo() { cout << "B::foo(this=" << this << ")\n"; }
 };
 ```
 
@@ -2921,6 +2921,26 @@ void print_stacktrace()
 
     backtrace_symbols_fd(array, size, STDOUT_FILENO);
 }
+```
+
+Print source location
+```cpp
+#include <iostream>
+#include <source_location>
+
+using std::source_location;
+
+void print(const source_location& location = source_location::current()) noexcept
+{
+    std::cout << location.file_name() << '('  << location.line() << ':' << location.column() << ") ";
+    std::cout << location.function_name();
+}
+
+void foo()
+{
+    print();  // line 20
+}
+// prints: main.cpp(20:4) void foo()
 ```
 
 ## RAII for malloc/free
