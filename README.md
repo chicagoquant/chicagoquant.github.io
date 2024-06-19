@@ -25,4 +25,4 @@
 - [Num 8 leet](cheat-leet.md)
 - [Num 9 algo](cheat-algo.md)
 - [Num 10 isl](cheat-islp.md)
-- [Num 11 isl](cheat-vim.md)
+- [Num 11 vim](cheat-vim.md)

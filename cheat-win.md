@@ -1,6 +1,11 @@
 
 # Command line
 ### Zoxide
+
+https://github.com/ajeetdsouza/zoxide/releases/download/v0.9.2/zoxide-0.9.2-x86_64-pc-windows-msvc.zip
+
+https://github.com/shunsambongi/clink-zoxide
+
 ```text
 zoxide query -a -l -s
 ```
@@ -274,3 +279,110 @@ dotfiles config --local status.showUntrackedFiles no
 
 dotfiles=git --git-dir=C:\temp\...\git-repos\dotfiles.git --work-tree=C:\ $*
 ```
+
+## Cmder
+
+```
+"1.3.25" 
+
+> dir /b C:\tools\cmder\current\Version*
+Version 1.3.25.328
+
+https://cmder.app/
+https://github.com/cmderdev/cmder/releases
+https://github.com/cmderdev/cmder/releases/download/v1.3.25/cmder.7z
+
+dir current\vendor\git-for-windows\etc\post-install
+dir current\vendor\git-for-windows\etc
+
+> copy current\vendor\conemu-maximus5\ConEmu.xml c2\vendor\conemu-maximus5\
+
+# copy current\config c2\config
+> copy current\config\clink_history* c2\config\
+current\config\clink_history
+current\config\clink_history_11836
+current\config\clink_history_11836.removals
+        3 file(s) copied.
+
+> copy current\config\clink_settings c2\config\
+
+> copy current\config\cmder_prompt_config.lua c2\config\
+
+> copy current\config\user* c2\config\
+current\config\user-ConEmu.xml
+current\config\user_aliases.cmd
+current\config\user_profile.cmd
+        3 file(s) copied.
+
+> copy current\config\zoxide.lua c2\config\
+
+### first run
+Running Git for Windows one time Post Install....
+"running post-install"
+'C:\Windows\system32\drivers\etc\hosts' -> '/etc/hosts'
+'C:\Windows\system32\drivers\etc\protocol' -> '/etc/protocols'
+'C:\Windows\system32\drivers\etc\services' -> '/etc/services'
+'C:\Windows\system32\drivers\etc\networks' -> '/etc/networks'
+The batch file cannot be found.
+
+Clink v1.6.16 is available.
+- To apply the update, run 'clink update'.
+- To stop checking for updates, run 'clink set clink.autoupdate off'.
+- To view the release notes, visit the Releases page:
+  https://github.com/chrisant996/clink/releases
+
+> clink info
+version  : 1.6.16.c5eaf9
+session  : 10544
+injected : C:\Users\USERNAME\AppData\Local\Temp\clink\dll_cache\1.6.14.93b83f_c6da5b73\clink_dll_x64.dll (1.6.14)
+binaries : C:\tools\cmder\current\vendor\clink
+state    : C:\tools\cmder\current\config
+log      : C:\tools\cmder\current\config\clink.log
+settings : C:\tools\cmder\current\config\clink_settings
+history  : C:\tools\cmder\current\config\clink_history
+scripts  : C:\tools\cmder\current\vendor ; C:\tools\cmder\current\vendor\clink ; C:\tools\cmder\current\config
+inputrc  : %clink_inputrc%
+             (unset)
+         : state directory
+             C:\tools\cmder\current\config\.inputrc
+             C:\tools\cmder\current\config\_inputrc
+         : %userprofile%
+             C:\Users\USERNAME\.inputrc   (LOAD)
+             C:\Users\USERNAME\_inputrc
+         : %localappdata%
+             C:\Users\USERNAME\AppData\Local\.inputrc
+             C:\Users\USERNAME\AppData\Local\_inputrc
+         : %appdata%
+             C:\Users\USERNAME\AppData\Roaming\.inputrc
+             C:\Users\USERNAME\AppData\Roaming\_inputrc
+         : %home%
+             C:\Users\USERNAME\.inputrc   (exists)
+             C:\Users\USERNAME\_inputrc
+system   : 10.0.22631.3737
+codepage : 1252
+keyboard langid : 1033
+keyboard layout : 00000409
+```
+
+# other tools
+- 7z
+- black
+- cmder
+- cpu-z
+- fzf
+- gink
+- KeePass
+- keys
+- kitty
+- nirsoft
+- PDF24
+- rclone
+- sumatrapdf
+- sysinternals
+- Terminals
+- tor-browser
+- vim
+- vscode
+- winpython
+- xournalpp
+- zoxide
