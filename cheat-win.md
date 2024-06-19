@@ -367,12 +367,13 @@ keyboard layout : 00000409
 # other tools
 - 7z
 - black
-- cmder
+  https://github.com/psf/black/releases/tag/23.12.1
+  python formatter
+- [cmder](#cmder)
 - cpu-z
 - fzf
 - gink
 - KeePass
-- keys
 - kitty
 - nirsoft
 - PDF24
@@ -380,9 +381,13 @@ keyboard layout : 00000409
 - sumatrapdf
 - sysinternals
 - Terminals
-- tor-browser
 - vim
+  9.0
 - vscode
+  https://code.visualstudio.com/download
 - winpython
+  https://winpython.github.io
+  https://github.com/winpython/winpython/releases/
+  download:  Winpython64-3.12.3.0.exe
 - xournalpp
-- zoxide
+- [zoxide](#zoxide)
