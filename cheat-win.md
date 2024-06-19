@@ -283,7 +283,7 @@ dotfiles=git --git-dir=C:\temp\...\git-repos\dotfiles.git --work-tree=C:\ $*
 ## Cmder
 
 ```
-"1.3.25" 
+"1.3.25"
 
 > dir /b C:\tools\cmder\current\Version*
 Version 1.3.25.328
@@ -362,6 +362,25 @@ system   : 10.0.22631.3737
 codepage : 1252
 keyboard langid : 1033
 keyboard layout : 00000409
+```
+
+## Git config
+
+```
+[user]
+  name = Abra ka dabra
+  email = nospam@gmail.com
+
+[alias]
+  lol = log --graph --pretty=format:\"%C(yellow)%h%Creset%C(cyan)%C(bold)%d%Creset %C(cyan)(%ci)%Creset %C(green)%ce%Creset %s\"
+  lol3 = log --graph --pretty=format:\"%C(yellow)%h%Creset%C(cyan)%C(bold)%d%Creset %C(cyan)(%ci)%Creset %C(green)%ce%Creset %s\" -n 3
+  co = checkout
+  br = branch
+  ci = commit
+  stu = status -s -uno
+  wdiff = diff --no-prefix -w
+  vdiff = difftool --tool=vimdiff
+  brsort = branch -a --sort=-committerdate  --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) (%(color:green)%(committerdate:short)%(color:reset))'
 ```
 
 # other tools
