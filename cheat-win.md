@@ -384,29 +384,65 @@ keyboard layout : 00000409
 ```
 
 # other tools
-- 7z
-- black
+- 7zip / 7z
+- ag
+- *black*
   https://github.com/psf/black/releases/tag/23.12.1
-  python formatter
+- CCleaner
+- cloc
 - [cmder](#cmder)
 - cpu-z
+- dbeaver
+- dotnetversions
+- DrawIODesktop
+- ffmpeg
+- freeplane
 - fzf
 - gink
+- Greenshot
+- ImageMagick
+- Infragistics
+- jdk
+- joplin
+- jq
 - KeePass
 - kitty
-- nirsoft
+- miktex
+- mpv
+- MS-Software
+- *nirsoft*
+- nvm
+- paisa
 - PDF24
+- pdfsam
+- pdftk
+- putty
+- qbittorrent
+- quarto
+- R
 - rclone
-- sumatrapdf
-- sysinternals
+- rstudio
+- ShareX
+- SumatraPDF
+- SysinternalsSuite
+- tabby
+- teamviewer
 - Terminals
+- texstudio
+- Vagrant
+- VBox
+- veracrypt
 - vim
   9.0
-- vscode
+- vlc
+- VSCode
   https://code.visualstudio.com/download
-- winpython
+- WinPython
   https://winpython.github.io
   https://github.com/winpython/winpython/releases/
   download:  Winpython64-3.12.3.0.exe
 - xournalpp
+- youtube-dl
+- yq
+- yt-dlp
 - [zoxide](#zoxide)
