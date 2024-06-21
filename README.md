@@ -26,3 +26,4 @@
 - [Num 9 algo](cheat-algo.md)
 - [Num 10 isl](cheat-islp.md)
 - [Num 11 vim](cheat-vim.md)
+- [Num 12 cmake](cheat-cmake.md)
