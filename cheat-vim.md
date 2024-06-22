@@ -101,4 +101,50 @@ let g:user_emmet_leader_key='<C-Z>'
 
 ## Useful plugins
 
-Neoformat, does clang-format
+### Neoformat, does clang-format
+
+### YCM
+
+see: [YCM Options Manual](https://ycm-core.github.io/YouCompleteMe/#options)
+```
+Plugin 'ycm-core/YouCompleteMe'
+
+"let g:ycm_auto_hover = 'CursorHold'    " after updatetime milliseconds, empty string to disable
+"set updatetime=4000
+
+"let g:ycm_server_python_interpreter = ''
+"let g:ycm_global_ycm_extra_conf = ''
+"let g:ycm_confirm_extra_conf = 1 " ask once per .ycm_extra_conf.py file if it is safe to be loaded
+let g:ycm_extra_conf_globlist = ['~/work/*','!~/*']
+
+"let g:ycm_use_ultisnips_completer = 0 " query the UltiSnips plugin for possible completions of snippet triggers
+"let g:ycm_disable_for_files_larger_than_kb = 1000
+
+"let g:ycm_use_clangd = 2
+"let g:ycm_clangd_binary_path = ''
+"let g:ycm_clangd_args = []
+"let g:ycm_clangd_uses_ycmd_caching = 1 " Uses ycmd's caching and filtering logic
+"let g:ycm_language_server = []
+"let g:ycm_disable_signature_help = 1
+
+" Enable debugging
+let g:ycm_keep_logfiles = 1
+let g:ycm_log_level = 'debug'
+```
+
+sample: `ycm_extra_conf.py`
+
+```
+# ~/work/blah-proj/.ycm_extra_conf.py
+compilation_database_folder = ~/builds/blah-debug
+```
+
+```
+cd ~/.vim/bundle/YouCompleteMe
+python3.10 install.py \
+  --clang-completer \
+  --clangd-completer \
+  --system-libclang \
+  --ninja \
+  --clang-tidy
+```
