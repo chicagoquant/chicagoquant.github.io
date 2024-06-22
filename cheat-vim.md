@@ -142,9 +142,15 @@ compilation_database_folder = ~/builds/blah-debug
 ```
 cd ~/.vim/bundle/YouCompleteMe
 python3.10 install.py \
+  --build-dir /tmp/build-ycm \
   --clang-completer \
   --clangd-completer \
-  --system-libclang \
+  --clang-tidy \
   --ninja \
-  --clang-tidy
+  --verbose \
+
+# cp -r /tmp/build-ycm/lib ~/.vim/bundle/YouCompleteMe/third_party/ycmd/third_party/clangd/cache
+cp -r /tmp/build-ycm/lib ~/.vim/bundle/YouCompleteMe/third_party/ycmd/third_party/clang/lib
+
+#  --system-libclang \
 ```
