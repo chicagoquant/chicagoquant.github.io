@@ -413,6 +413,122 @@ shortcut.TargetPath = path_to_the_target_file
 shortcut.Save()
 ```
 
+# Network
+
+## Server - Synchronous
+
+```python
+import socket
+
+s = socket.socket()
+print("Socket created")
+
+port = 40000
+s.bind('', port)
+print("Socket bound to port". port)
+
+
+s.listen(5)
+print("Socket is listening")
+
+while True:
+  c, addr = s.accept()
+  print("Client connected", addr)
+
+  c.send(b'Hello world\n')
+  print("Sent a message to the client")
+
+  c.close()
+  print("Closed connection to client")
+```
+
+## Client - Synchronous
+```python
+import socket
+
+s = socket.socket()
+print("Socket created")
+
+port = 40000
+
+s.connect(('127.0.0.1', port))
+buf = s.recv(1024)
+print(buf)
+
+s.close()
+```
+
+## Server - Asynchronous
+```python
+import asyncio
+import subprocess
+
+
+def run_command(com: str) -> None:
+    try:
+        pro = subprocess.run(com.split(), capture_output=True, text=True)
+        if pro.stdout:
+            return f"out----------------\n{pro.stdout}"
+        elif pro.stderr:
+            return f"err----------------\n {pro.stderr}"
+        else:
+            return f"[executed]"
+    except Exception as ex:
+        print("exception occurred", ex)
+        return f"   [subprocess broke]"
+
+
+async def handle_client(reader, writer):
+    print(f"Connected to {writer.get_extra_info('peername')}")
+
+    while True:
+        data = await reader.read(100000)
+        message = data.decode().strip()
+        if not message:
+            break
+        print(f"Received message: {message}")
+        res = run_command(message)
+        writer.write(res.encode())
+    print("Closing connection")
+    writer.close()
+
+
+async def start_server():
+    server = await asyncio.start_server(handle_client, "127.0.0.1", 2000)
+    print("Server started")
+    await server.serve_forever()
+
+asyncio.run(start_server())
+
+```
+
+## Client - Asynchronous
+```python
+import asyncio
+
+
+async def telnet_client(host: str, port: int, username: str, password: str) -> None:
+	reader, writer = await asyncio.open_connection(host, port)
+	print(f"connected to ({host}, {port})")
+
+	# Login to the server, if the server requires authentication
+	""" await writer.write(f"{username}\n".encode())
+		await writer.write(f"{password}\n".encode()) """
+
+	while True:
+		command = input("\nEnter a command: ")
+		if not command:
+			print("[No command] ...closing connection ")
+			break
+		writer.write(f"{command}\n".encode())
+		data = await reader.read(100000)
+		print(data.decode().strip())
+
+# there is a telnet server (telnet_server.py) listening on localhost port=23
+asyncio.run(telnet_client("127.0.0.1", 2000, "username", "password"))
+```
+
+
 # Async
 
 ```python
