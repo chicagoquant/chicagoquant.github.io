@@ -424,22 +424,24 @@ s = socket.socket()
 print("Socket created")
 
 port = 40000
-s.bind('', port)
-print("Socket bound to port". port)
-
+s.bind(('', port))
+print("Socket bound to port", port)
 
 s.listen(5)
 print("Socket is listening")
 
 while True:
-  c, addr = s.accept()
-  print("Client connected", addr)
+    c, addr = s.accept()
+    print("Client connected", addr)
 
-  c.send(b'Hello world\n')
-  print("Sent a message to the client")
+    s = c.recv()
+    print(s)
 
-  c.close()
-  print("Closed connection to client")
+    c.send(b'Hello world\n')
+    print("Sent a message to the client")
+
+    c.close()
+    print("Closed connection to client")
 ```
 
 ## Client - Synchronous
@@ -452,6 +454,7 @@ print("Socket created")
 port = 40000
 
 s.connect(('127.0.0.1', port))
+s.send(b'Hi there')
 buf = s.recv(1024)
 print(buf)
 
@@ -462,7 +465,6 @@ s.close()
 ```python
 import asyncio
 import subprocess
-
 
 def run_command(com: str) -> None:
     try:
