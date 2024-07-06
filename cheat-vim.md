@@ -101,13 +101,85 @@ let g:user_emmet_leader_key='<C-Z>'
 
 ## Useful plugins
 
+### Tagbar
+```
+if enabled_tagbar
+  Plugin 'preservim/tagbar'
+
+  nmap <F8> :TagbarToggle<CR>
+  set tags=~/work/my-src/tags`
+  " path to universal ctags
+  let g:tagbar_ctags_bin = '~/my/bin/ctags'
+endif
+```
+
 ### Neoformat, does clang-format
+```
+" github.com/sbdchd/neoformat
+let enabled_neoformat = 0
+if enabled_neoformat
+  Plugin 'sbdchd/neoformat'
+  let g:neoformat_verbose = 1
+  augroup fmt
+    autocmd!
+    autocmd BufWritePre *.h,*.c,*.cc,*.cpp,*.cxx undojoin | Neoformat clangformat
+  augroup END
+endif
+```
+
+### Clang format
+```
+if enabled_clang_format_vim
+  function! ClangFormatOnSave()
+    if !empty(findfile('.clang-format', '.;'))
+      let l:formatdiff = 1 " only format lines that have changed
+      py3f path-to/share/clang/clang-format.py
+    endif
+  endfunction
+  augroup ClangFormatOnSave
+    au!
+    autocmd BufWritePre *.h,*.c,*.cc,*.cpp,*.cxx call ClangFormatOnSave()
+  augroup END
+endif
+```
 
 ### YCM
 
 see: [YCM Options Manual](https://ycm-core.github.io/YouCompleteMe/#options)
 ```
 Plugin 'ycm-core/YouCompleteMe'
+
+let g:ycm_global_ycm_extra_conf = 1
+let g:ycm_extra_conf_globlist = ['~/work/.ycm_extra_conf.py']
+let g:ycm_server_python_interpreter = 'path-to/bin/python3.11'
+
+let g:ycm_use_clangd = 1
+let g:ycm_clangd_binary_path = 'path-to/bin/clangd'
+let g:ycm_clangd_args = ['--background-index', '--clang-tidy']
+
+let g:ycm_enable_diagnostic_signs = 1
+let g:ycm_autoclose_preview_window_after_completion = 1
+let g:ycm_autoclose_preview_window_after_insertion = 1
+
+let g:ycm_enable_semantic_highlighting = 1
+let g:ycm_always_populate_location_list = 1
+
+nnoremap <leader>gf :YcmCompleter Format<CR>
+nnoremap <leader>gi :YcmCompleter GoToInclude<CR>
+nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
+nnoremap <F11> :YcmCompleter GoToCallers<CR>
+nnoremap <F10> :YcmCompleter GoToReferences<CR>
+nnoremap <F9> :YcmCompleter GoToDeclaration<CR>
+nnoremap <leader>h :YcmCompleter GoToAlternateFile<CR>
+
+let g:ycm_auto_hover = ''
+nnoremap <leader>x <plug>(YCMHover)
+nnoremap <F7> <plug>(YCMFindSymbolInWorkspace)
+
+nnoremap <leader>yfw <plug>(YCMFindSymbolInWorkspace)
+nnoremap <leader>yfd <plug>(YCMFindSymbolInDocument)
+nnoremap <leader>yth <plug>(YCMTypeHierarchy)
+nnoremap <leader>ych <plug>(YCMCallHierarchy)
 
 "let g:ycm_auto_hover = 'CursorHold'    " after updatetime milliseconds, empty string to disable
 "set updatetime=4000
@@ -130,6 +202,16 @@ let g:ycm_extra_conf_globlist = ['~/work/*','!~/*']
 " Enable debugging
 let g:ycm_keep_logfiles = 1
 let g:ycm_log_level = 'debug'
+```
+
+### Ripgrep
+```
+set grepprg=rg\ --vimgrep\ --smart-case\ --follow
+set grepformat=%f:%l:%c:%m
+nnoremap [q :cprev<CR>
+nnoremap ]q :cnext<CR>
+nnoremap <leader>co :copen<CR>
+nnoremap <leader>cc :cclose<CR>
 ```
 
 sample: `ycm_extra_conf.py`
