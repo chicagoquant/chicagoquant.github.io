@@ -954,6 +954,7 @@ BOOST_PYTHON_MODULE(mymodule)
   - `x.parent`
   - `x.with_name('something.txt')`
   - `x.parent.joinpath('subdir1', 'subdir2')`
+  - `x.glob(pattern)`
   - prefer `pathlib` instead of `os.path`
 - file io, pass `fp: typing.TextIO` to a function
   ```python
