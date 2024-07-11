@@ -100,6 +100,30 @@ klass = Klass(id=1, sval="hello", ival=100)     | klass = Klass(id=1, sval="hell
 
 # Basics
 
+## pathlib
+
+```python
+p = pathlib.Path(path_to_file)
+p.name # basename
+p.parent # dirname
+
+if p.is_dir():
+    dir_contents = list(p.iterdir())
+
+all_json_files = list(p.glob('**/*.json')
+
+new_path = p / 'blah' / 'haha.txt'
+
+p.resolve() # realpath
+
+p.exists()
+
+with p.open() as ifp:
+    process(ifp)
+```
+
+See: https://docs.python.org/3/library/pathlib.html
+
 ## Debugging
 ```python
 print(globals())
