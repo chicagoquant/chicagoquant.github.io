@@ -683,6 +683,22 @@ asyncio.run( coro(), debug=True )
 ```shell
 conda create -n my-async-env python=3.10 pandas=1.4.3 aioredis=2.0.1 fastapi uvicorn
 ```
+# Regular expressions
+
+```python
+def comment_remover(text):
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return " " # note: a space and not an empty string
+        else:
+            return s
+    pattern = re.compile(
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE
+    )
+    return re.sub(pattern, replacer, text)
+```
 
 # Beautiful Soup
 
