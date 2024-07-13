@@ -781,6 +781,86 @@ for h2_item in all_h2:
 
 See also: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 
+# XML Parsing
+
+## minidom
+```python
+
+from xml.dom import minidom, Node
+
+doc = minidom.parse(fname)
+root = doc.documentElement
+
+if root.hasAttribute('id'):
+    schema_id = root.getAttribute('id')
+
+types = root_node.getElementsByTagName("types")
+for t in types:
+    for c in t.childNodes:
+        if c.nodeType == Node.ELEMENT_NODE:
+            if c.nodeName == 'blah'
+                name = c.getAttribute('name')
+                attrib2 = c.getAttribute('attrib2')
+
+
+node.hasAttribute('...')
+node.getAttribute('...')
+node.lastChild.nodeValue
+node.childNodes[0].nodeValue
+node.nodeType == Node.ELEMENT_NODE
+node.nodeName
+```
+
+## beautiful soup
+
+```python
+
+# pip install beautifulsoup4 lxml html5lib
+
+from bs4 import BeautifulSoup
+
+soup = BeautifulSoup(markup, "xml")
+
+```
+
+## lxml
+
+```python
+import lxml.etree as ET
+
+dom = ET.parse(xml_filename)
+xslt = ET.parse(xsl_filename)
+transform = ET.XSLT(xslt)
+newdom = transform(dom)
+print(ET.tostring(newdom, pretty_print=True))
+```
+
+## xml etree
+```
+import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import XMLSchema
+
+# Load the XML schema
+schema = XMLSchema('X110.xsd')
+# Parse the XML document
+tree = ET.parse('X110.xml')
+# Validate the XML document
+if not tree.validate(schema):
+    raise ValueError('The XML document is invalid.')
+```
+
+# Jinja2
+
+```python
+import jinja2
+
+jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath="path-to-template-dir"), line_statement_prefix='%')
+template = jinja_env.get_template('template-file-name.jinja')
+with open('out-file-name', 'w') as ofp:
+    ofp.write(template.render(**data_dict))
+```
+
+
 # Boost Python
 
 ## Boost Python CMake
