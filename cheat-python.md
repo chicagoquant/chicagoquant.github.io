@@ -825,6 +825,8 @@ node.lastChild.nodeValue
 node.childNodes[0].nodeValue
 node.nodeType == Node.ELEMENT_NODE
 node.nodeName
+node.nodeType == Node.TEXT_NODE
+node.data
 ```
 
 ## beautiful soup
