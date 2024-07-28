@@ -1,6 +1,27 @@
 
 # Ninja
 
+## Quickstart
+
+```
+cmake -S . -B build -G Ninja
+cmake --build build
+  -v        # verbose
+  -j N      # parallel
+  -t target
+```
+
+### Minimal
+
+```
+cmake_minimum_required(VERSION 3.15)
+
+# set the project name and version
+project(Tutorial VERSION 1.0)
+
+...
+```
+
 ## List all targets
 
 ```
