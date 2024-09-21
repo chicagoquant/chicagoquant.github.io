@@ -62,7 +62,7 @@ find_package(Python3 COMPONENTS Development Interpreter)
 find_package(Boost COMPONENTS python)
 
 get_property(blah DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)
-# or 
+# or
 get_directory)property(blah DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" IMPORTED_TARGETS)
 
 # a semicolon separated list
@@ -306,15 +306,10 @@ ctest --test-dir $HOME/crap/build-blah
 
 # Boost in CMake
 
-```
-Boost_ROOT = ...
-find_package(Boost COMPONENTS python)
-```
-
 - building boost
 
 ```
-bootstrap.sh --with-python=path-to-python3-executable
+bootstrap.sh --with-toolset=clang --with-python=path-to-python3-executable
 # that would have build b2 executable, and produced project-config.jam
 
 # define our own toolset gcc-crap in user-config.jam
@@ -327,8 +322,30 @@ using gcc
   : <cflags>"${MY_CUSTOM_CFLAGS}"
     <cxxflags>"${MY_CUSTOM_CXXFLAGS}"
   ;
+using clang
+  : crap
+  : ${MY_CUSTOM_CXX_PATH}
+  : <cflags>"${MY_CUSTOM_CFLAGS}"
+    <cxxflags>"${MY_CUSTOM_CXXFLAGS}"
+  ;
 
-./b2 
+./b2 -d2 -j8
+  --build-type=complete         # build all modules
+  --layout=versioned            # versioned/tagged/system
+  --build-dir=my-junk-build
+  --prefix=my-junk-install
+  -s ZLIB_INCLUDE=${ZLIB_ROOT_DIR}/include
+  -s ZLIB_LIBRARY_PATH=${ZLIB_ROOT_DIR}/lib
+  -s ZSTD_INCLUDE=${ZSTD_ROOT_DIR}/include
+  -s ZSTD_LIBRARY_PATH=${ZSTD_ROOT_DIR}/lib64
+  toolset=gcc-crap      # as defined in user-config.jam
+  threading=multi
+  runtime-link=shared
+  link=static           # shared / static
+  variant=release       # debug / release
+  install               # optional target: stage / install
+
+./b2
   -d2
   -j8
   --build-dir=my-junk-build     # build location
@@ -359,6 +376,113 @@ using gcc
   link=static           # shared / static
   variant=release       # debug / release
   install               # optional target: stage / install
+```
+
+- using boost python
+
+```
+Boost_ROOT = ...
+Boost_COMPILER=gcc / clang
+find_package(Boost COMPONENTS python)
+```
+
+- project tree
+
+```
+.
+|-- CMakeLists.txt
+|-- blah
+|   |-- CMakeLists.txt
+|   `-- bingo1.cpp
+|-- cmake
+|   `-- hello_world.cmake
+`-- tests
+    |-- CMakeLists.txt
+    `-- test_blah.py
+```
+
+- CMakeLists.txt
+
+```
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+
+project(best_project)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS True)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+find_package(Python3 COMPONENTS Development Interpreter)
+find_package(Boost COMPONENTS python)
+
+include(CPack)
+include(CTest)
+enable_testing()
+
+include(hello_world)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_subdirectory(blah)
+add_subdirectory(tests)
+```
+
+```
+project(blah)
+
+set(SOURCE_FILES bingo1.cpp)
+
+add_library(blah_ext SHARED ${SOURCE_FILES})
+
+target_link_libraries(blah_ext PRIVATE Boost::python Python3::Python)
+set_target_properties(blah_ext PROPERTIES PREFIX "")
+
+install(TARGETS blah_ext DESTINATION lib EXPORT BlahExtTargets)
+
+install(EXPORT BlahExtTargets FILE BlahExt.cmake NAMESPACE Ahoy:: DESTINATION lib/cmake/BlahExt)
+
+```
+
+```
+add_test(NAME test_blah COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR})
+set_tests_properties(test_blah PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/blah:${ENV{PYTHONPATH}}")
+```
+
+```
+#include <boost/python.hpp>
+const char* haha() { return "hoho, haha"; }
+
+BOOST_PYTHON_MODULE(blah_ext) {
+    using namespace boost::python;
+    def("haha", haha);
+}
+```
+
+```
+import pytest
+
+def test_blah_fun():
+    import blah_ext
+    assert blah_ext.haha() == "hoho, haha"
+```
+
+```
+cmake -GNinja
+    -DPython3_EXECUTABLE=path-to-python-exe
+    -DBoost_ROOT=path-to-boost
+    -DBoost_COMPILER=clang
+    -DCMAKE_CXX_COMPILER=clang++
+    -B builds
+    -DCMAKE_INSTALL_PREFIX=path-to-install-dir
+    .
+cmake --build builds -v --target all test install
+
+LD_LIBRARY_PATH+=:path-to-boost-lib-dir
+LD_LIBRARY_PATH+=:path-to-blah-install-lib-dir
+
+PYTHONPATH+=:path-to-blah-install-lib-dir
+
+python3 -c 'from blah_ext import haha; print(haha())'
 ```
 
 # Bazel
