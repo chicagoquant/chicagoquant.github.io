@@ -4605,6 +4605,13 @@ make_local_time = [](Y,m,d,H,M,S) {
   auto tm = cctz::civil_second(Y,m,d,H,M,S);
   return cctz::convert(tm, tz);
 };
+
+// current time
+using namespace std::chrono;
+high_resolution_clock::time_point now = high_resolution_clock::now();
+high_resolution_clock::duration d = now.time_since_epoch(); // duration
+high_resolution_clock::rep ts = d.count();  // nanosecond ts, int64_t
+cout << ts << endl;
 ```
 
 ## Talks summary
