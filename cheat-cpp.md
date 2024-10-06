@@ -4499,6 +4499,66 @@ TEST_CASE( test_name, ... ) {
 }
 ```
 
+## Boost Property Tree
+
+```cpp
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
+using namespace boost::property_tree;
+
+ptree // like a container of pair<string, ptree>
+ptree n;
+json_parser::read_json(file, n);
+
+string root_node_name = "Root";
+
+n.get_child(node_name)
+n.empty()
+n.count(node_name)
+n.erase(node_name)
+obj = n.get_value<T>()
+obj = n.get<T>(node_path)
+obj = n.get<T>(node_path, default_value)
+obj = n.get_optional<T>(node_path)
+
+for (const auto& child : n.get_child(node_path))
+{
+  ... child.second.data() ...
+}
+
+json_parser::write_json(file, n);
+n.put_value(value);
+n.put(node_path, value); // overwrites value, if there is already one
+for (...)
+{
+  n.add(node_path, value); // adds value to the list
+}
+
+add_child(node_path, subtree)
+put_child(node_path, subtree)
+
+// n. get, get_optional, get_value, get_child(), get_child_optional()
+// n. put, put_value, put_child()
+// n. data()
+// n. add, add_child
+
+// n. insert, push_back()
+// n. find(name)
+// n. erase()
+
+it = node.find(name)
+x = boost::lexical_cast<T>(it->second.data())
+// or
+n.get<T>(name)
+
+n.push_back(ptree::value_type(name, ptree(value))
+// or
+n.put(name, value)
+
+// get, put can work with node_path
+```
+
 ## Boost Intrusive
 
 ### doubly linked list
