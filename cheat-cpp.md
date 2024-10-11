@@ -4559,6 +4559,51 @@ n.put(name, value)
 // get, put can work with node_path
 ```
 
+## magic enum
+
+[github.com/Neargye/magic_enum](https://github.com/Neargye/magic_enum)
+
+```cpp
+#include <magic_enum.hpp>
+
+magic_enum::enum_name(enum_val);
+magic_enum::enum_cast<EnumType>(enum_str).has_value()
+magic_enum::enum_cast<EnumType>(enum_str, magic_enum::case_insesitive).has_value()
+magic_enum::enum_cast<EnumType>(int_val).has_value()
+
+
+magic_enum::enum_value<EnumType>(idx)
+magic_enum::enum_values<EnumType>() -> enum[]
+magic_enum::enum_count<EnumType>()
+
+magic_enum::enum_integer(enum_val)
+magic_enum::enum_names<EnumType>() -> string[]
+magic_enum::enum_entries<EnumType>() -> (EnumType, string)[]
+
+
+switch (magic_enum::enum_fuse(enum1_val1, enum2_val1).value()) {
+case magic_enum::enum_fuse(EnumType1::E1, EnumType2::X1).value():
+  break;
+}
+
+magic_enum::enum_index(enum_val)
+
+magic_enum::enum_contains(enum_val)
+magic_enum::enum_contains<EnumType>(str_val)
+magic_enum::enum_contains<EnumType>(int_val)
+
+magic_enum::enum_flags_name(enum_val) -> "Flag1 | Flag2 | Flag3"
+magic_enum::enum_flags_contains(ival)
+magic_enum::enum_flags_cast(ival) -> "Flag1 | Flag2 | Flag3"
+
+#include <magic_enum_iostream.hpp>
+
+using magic_enum::iostream_operators::operator<<;
+EnumType e;
+cout << e;
+cin >> e;
+```
+
 ## Boost Intrusive
 
 ### doubly linked list
