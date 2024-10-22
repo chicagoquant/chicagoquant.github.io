@@ -1186,3 +1186,31 @@ python -m pip install mysql-connector-python
 conda deactivate
 
 ```
+
+# Django
+
+```
+python -m pip install Django==5.1
+python -m django --version
+python -c 'import django; print(django.get_version())'
+
+# step 0
+mkdir djangotutorial
+django-admin startproject mysite djangotutorial
+cd djangotutorial
+
+python manage.py runserver
+open http://localhost:8000
+
+# step 1
+ls -l manage.py
+python manage.py startapp polls
+edit polls/views.py
+edit polls/urls.py
+edit mysite/urls.py
+open http://localhost:8000/polls/
+
+edit mysite/settings.py
+python manage.py migrate
+
+```
