@@ -1158,3 +1158,31 @@ https://github.com/mCodingLLC/VideosSampleCode
 https://www.youtube.com/@mathbyteacademy/videos
 https://github.com/fbaptiste/python-blog
 
+# Conda cheat sheet
+
+```
+conda create -n new_env_name python=3.12 pandas
+
+conda activate new_env_name
+activate new_env_name
+
+conda install pkg_name_to_install
+
+# to add conda envs to jupyter notebooks
+conda install ipykernel
+python -m ipykernel install --user --name=new_env_name
+
+conda info
+
+python -m pip install mysql-connector-python
+>>> import mysql.connector
+>>> cnx = mysql.connector.connect(host=..., user=..., password=..., database=...)
+>>> cursor = cnx.cursor()
+>>> cursor.execute(query)
+>>> for row in cursor: print(x)
+>>> cursor.close()
+>>> cnx.close()
+
+conda deactivate
+
+```
