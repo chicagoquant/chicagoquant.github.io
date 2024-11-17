@@ -1189,8 +1189,21 @@ conda deactivate
 
 # Django
 
+see: https://docs.djangoproject.com/en/5.1/intro/tutorial01/
+
 ```
-python -m pip install Django==5.1
+# if using conda on windows
+set P=C:\ProgramData\Anaconda3\Scripts\
+%P%conda create -n test1 python=3.12
+%P%activate test1
+%P%conda install pandas ipykernel
+
+# to remove conda env
+%P%deactivate
+%P%conda env remove -n test1
+
+# any python 3 installation (Windows/Linux)
+python -m pip install Django==5.1 mysql-connector-python mysqlclient
 python -m django --version
 python -c 'import django; print(django.get_version())'
 
@@ -1208,9 +1221,32 @@ python manage.py startapp polls
 edit polls/views.py
 edit polls/urls.py
 edit mysite/urls.py
+python manage.py runserver
 open http://localhost:8000/polls/
+```
 
+# step 2
+
+```
 edit mysite/settings.py
+# see: mysite/settings.py {DATABASES, INSTALLED_APPS}
 python manage.py migrate
 
+edit polls/models.py
+edit mysite/settings.py
+
+python manage.py makemigration polls
+# see polls/migrations/0001_initial.py
+python manage.py sqlmigrate polls 0001
+python manage.py migrate
+
+python manage.py shell
+# Question.objects.all()
+# q = Question(...)
+# q.save()
+# q.id
+
+python manage.py createsuperuser
+python manage.py runserver
+open http://localhost:8000/admin/
 ```
