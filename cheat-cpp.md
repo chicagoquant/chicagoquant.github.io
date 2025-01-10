@@ -1,5 +1,9 @@
 # Competitive programming
 
+Compiler Versions:
+- Clang 16.0.5 (better available 17.0.6)
+- GCC 12.3.0 (better available 13.2.0)
+
 [what is new in C++20](https://en.cppreference.com/w/cpp/20) [working examples](https://github.com/makelinux/examples/blob/HEAD/cpp/20.cpp)
 
 [github-repo](https://github.com/chicagoquant/chicagoquant.github.io/) [self](https://github.com/chicagoquant/chicagoquant.github.io/blob/main/cheat-cpp.md)

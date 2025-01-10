@@ -74,7 +74,6 @@ std::print("{}", rng::reverse_view{fm}); // {"world": 2, "hello": 1}
 - range adaptor - convert a range into a view
 
 ```
-
 * c++2x Range Algorithms
 ** queries :~find~, ~find_if~, ~find_if_not~
 ** queries : ~find_last~, ~find_last_if~, ~find_last_if_not~ (23)
@@ -109,6 +108,27 @@ std::print("{}", rng::reverse_view{fm}); // {"world": 2, "hello": 1}
 ** generation : ~next_permutation~, ~prev_permutation~
 ```
 
+```
+* Range Views
+** modifiers :~join_view~, ~join_with~ (23)
+** modifiers: ~split_view~, ~lazy_split_view~
+** modifiers : reverse_view~
+** modifiers : ~transform_view~
+** modifiers : ~cartesian_product~ (23)
+** modifiers : ~zip~, ~zip_transform~ (23)
+** sample    : ~drop_view~, ~drop_while_view~
+** sample    : ~take_view~, ~take_while_view~
+** sample    : ~filter_view~, ~stride~ (23)
+** sample    : ~chunk~, ~chunk_by~ (23)
+** adpaters  : ~istream_view~
+** adpaters  : ~keys_view~, ~values_view~
+** adapters  : ~ref_view~, ~all_view~
+** adapters  : ~enumerate~ (23)
+** factories : ~iota_view~, ~single_view~,~empty_view~
+** factories : ~repeat~
+** convert   : ~as_const~ (23), ~as_rvalue~ (23)
+```
+
 # godbolt
 - 2-4 sort [https://godbolt.org/z/o478PEMff](https://godbolt.org/z/o478PEMff)
 - 2-6 find-if [https://godbolt.org/z/4KEM3W939](https://godbolt.org/z/4KEM3W939)
@@ -117,8 +137,8 @@ std::print("{}", rng::reverse_view{fm}); // {"world": 2, "hello": 1}
 - 4-6 projection [https://godbolt.org/z/8cvoEvd11](https://godbolt.org/z/8cvoEvd11)
 - 4-8 find-last [https://godbolt.org/z/8KPjqYrG1](https://godbolt.org/z/8KPjqYrG1)
 - 5-6 range-adaptor [https://godbolt.org/z/1863ce6sW](https://godbolt.org/z/1863ce6sW)
-- 5-9 [https://godbolt.org/z/G5PE614ff](https://godbolt.org/z/G5PE614ff)
-- [https://godbolt.org/z/c137bM8f4](https://godbolt.org/z/c137bM8f4)
+- 5-9 view typename [https://godbolt.org/z/G5PE614ff](https://godbolt.org/z/G5PE614ff)
+- 5-11 composition [https://godbolt.org/z/c137bM8f4](https://godbolt.org/z/c137bM8f4)
 - 6-3 cartesian-product [https://godbolt.org/z/rYehsTMxY](https://godbolt.org/z/rYehsTMxY)
 - 7-5 ranges-to [https://godbolt.org/z/c137bM8f4](https://godbolt.org/z/c137bM8f4)
 - 7-6 ranges-to [https://godbolt.org/z/bd558h47j](https://godbolt.org/z/bd558h47j)
