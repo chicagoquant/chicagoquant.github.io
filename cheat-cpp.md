@@ -4687,6 +4687,59 @@ inline void intrusive_ptr_release(T* expr){
 
 ## std chrono, cctz time library
 
+print time
+```cpp
+using std;
+using std::chrono;
+
+auto now = system_clock::now(); // time_point
+auto duration = now.time_since_epoch();
+cout << "Time since epoch: " << duration << endl; // ts in nsecs
+
+auto seconds = duration_cast<seconds>(duration);
+cout << "Time since epoch: " << seconds.count() << " seconds" << endl;
+
+#include <cctz/civil_time.h>
+#include <cctz/time_zone.h>
+
+std::cout << cctz::format("%Y-%m-%d %H:%M:%S.%E*f %z (%Z)", now, cctz::local_time_zone()) << std::endl;
+// 2025-01-19 10:20:05.000000 -06:00 (CST)
+// %H:%M:%S %z (%Z)
+// %F %T
+
+// see https://man7.org/linux/man-pages/man3/strftime.3.html
+//   %Y: Year with century (e.g., 2023)
+//   %y: Year without century (e.g., 23)
+//   %m: Month as a decimal number (01-12)
+//   %d: Day of the month as a decimal number (01-31)
+//   %H: Hour (24-hour clock) as a decimal number (00-23)
+//   %I: Hour (12-hour clock) as a decimal number (01-12)
+//   %M: Minute as a decimal number (00-59)
+//   %S: Second as a decimal number (00-60)
+//   %Z: Time zone name (e.g., PST, UTC)
+//   %z: Time zone offset from UTC (e.g., -0800)
+//
+// see: https://github.com/google/cctz/blob/master/include/cctz/time_zone.h#L284
+// with extensions
+//   - %Ez  - RFC3339-compatible numeric UTC offset (+hh:mm or -hh:mm)
+//   - %E*z - Full-resolution numeric UTC offset (+hh:mm:ss or -hh:mm:ss)
+//   - %E#S - Seconds with # digits of fractional precision
+//   - %E*S - Seconds with full fractional precision (a literal '*')
+//   - %E#f - Fractional seconds with # digits of precision
+//   - %E*f - Fractional seconds with full precision (a literal '*')
+//   - %E4Y - Four-character years (-999 ... -001, 0000, 0001 ... 9999)
+//   - %ET  - The RFC3339 "date-time" separator "T"
+//
+
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+std::cout << fmt::format("{}", now) << std::endl;
+std::cout << fmt::format("{:%H:%M:%S}", now) << std::endl; // note colon after left brace
+// see: https://fmt.dev/11.1/syntax/#chrono-format-specifications
+```
+
+cctz library
+
 ```cpp
 const char* str_timezone = "Asia/Tokyo";
 cctz::time_zone tz;

@@ -13,6 +13,7 @@
 ## Cheatsheets
 
 - [Num 1 cpp](cheat-cpp.md)
+  - [Num 1.4 ranges](cheat-ranges.md)
   - [Num 1.5 tmp](cheat-cpp-tmp.md)
 - [Num 2 python](cheat-python.md)
   - [Num 2.5 pandas/kaggle](cheat-pandas.md)
