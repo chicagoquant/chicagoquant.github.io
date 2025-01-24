@@ -728,6 +728,8 @@ string s = boost::lexical_cast<string>(n);
 ```
 
 fmt library
+- https://fmt.dev/11.1/ 
+- https://github.com/fmtlib/fmt
 
 ```cpp
 #include <string>
@@ -739,6 +741,15 @@ string s = fmt::format("{}", n);
 auto out = fmt::memory_buffer();
 fmt::format_to(out, "{}", n);
 cout << string_view(out.data(), out.data()+out.size()) << endl;
+
+fmt::to_string(...)
+fmt::sprintf("can use format without curly-braces, with percent format", ...);
+fmt::format(...)
+
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+#include <fmt/ostream.h>
+#include <fmt/ranges.h>
 ```
 
 
