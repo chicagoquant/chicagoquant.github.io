@@ -266,6 +266,8 @@ Cheatsheet
 Match brackets -> Ctrl + Shift + \
 Fold All  -> Ctrl + K, Ctrl + 0
 Unfold All  -> Ctrl + K, Ctrl + J
+
+(Clangd) Switch between header/source -> Alt + O
 ```
 
 ## Dotfiles in GIT
