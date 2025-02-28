@@ -2,7 +2,7 @@
 
 Compiler Versions:
 - Clang 16.0.5 (better available 17.0.6)
-- GCC 12.3.0 (better available 13.2.0), std=c++2b
+- GCC 12.3.0 (better available 13.2.0), std=c++2b [GodBolt](https://godbolt.org/z/Txs8jx638)
 - fmt 8.1.1 (https://godbolt.org/z/9qr8Pf8EP)
 - boost 1.81.0 [GodBolt](https://godbolt.org/z/5znMaoYWz)
 
