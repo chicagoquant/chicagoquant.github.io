@@ -4,7 +4,7 @@ Compiler Versions:
 - Clang 16.0.5 (better available 17.0.6)
 - GCC 12.3.0 (better available 13.2.0), std=c++2b
 - fmt 8.1.1 (https://godbolt.org/z/9qr8Pf8EP)
-- boost 1.81.0
+- boost 1.81.0 [GodBolt](https://godbolt.org/z/5znMaoYWz)
 
 [what is new in C++20](https://en.cppreference.com/w/cpp/20) [working examples](https://github.com/makelinux/examples/blob/HEAD/cpp/20.cpp)
 
