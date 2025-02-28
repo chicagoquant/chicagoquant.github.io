@@ -2,7 +2,9 @@
 
 Compiler Versions:
 - Clang 16.0.5 (better available 17.0.6)
-- GCC 12.3.0 (better available 13.2.0)
+- GCC 12.3.0 (better available 13.2.0), std=c++2b
+- fmt 8.1.1 (https://godbolt.org/z/9qr8Pf8EP)
+- boost 1.81.0
 
 [what is new in C++20](https://en.cppreference.com/w/cpp/20) [working examples](https://github.com/makelinux/examples/blob/HEAD/cpp/20.cpp)
 
@@ -2971,6 +2973,48 @@ void foo()
 ## RAII for malloc/free
 ```cpp
 unique_ptr<T, void(*)(void*)> raii_ptr( static_cast<T*>(::malloc(size)), ::free );
+```
+
+## Scoped Exit
+```cpp
+template<typename F>
+class OnScopeExit
+{
+public:
+  explicit OnScopeExit(F f) : func{std::move(f)}, dismissed{false} {}
+  OnScopeExit(const OnScopeExit&) = delete;
+  OnScopeExit& operator=(const OnScopeExit&) = delete;
+  OnScopeExit(OnScopeExit&& o) noexcept : func{std::move(o.func)}, dismissed{o.dismissed}
+  {
+    o.dismissed = true;
+  }
+
+  ~OnScopeExit()
+  {
+    if (!dismissed)
+    {
+      func();
+    }
+  }
+
+  void dismiss() noexcept
+  {
+    dismissed = true;
+  }
+
+private:
+  F func;
+  bool dismissed;
+};
+
+#define ON_SCOPE_EXIT(code) OnScopeExit cleanup_##__LINE__([&]{code;})
+
+void example()
+{
+  std::cout << "Entering example()\n";
+  ON_SCOPE_EXIT(std::cout << "Leaving example()\n");
+  ....
+}
 ```
 
 ## Print a vector

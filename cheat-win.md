@@ -270,6 +270,14 @@ Unfold All  -> Ctrl + K, Ctrl + J
 (Clangd) Switch between header/source -> Alt + O
 ```
 
+### File locations
+- Home Dir Settings: `%USERPROFILE%\.vscode\argv.json`, `.vscode\extensions\extensions.json`
+- User Settings: `%USERPROFILE%\AppData\Roaming\Code\User\settings.json`, `~/.config/Code/User/settings.json`
+- Remote Machine Settings: `~/.vscode-server/data/Machine/settings.json`
+- Workspace: `.../workspace.code-workspace`
+- Folder Settings: `.../.vscode/settings.json`
+- Default Settings: `%USERPROFILE%\AppData\Roaming\Code\User\defaultSettings.json`
+
 ## Dotfiles in GIT
 
 stick the alias line in `\tools\cmder\current\config\user_aliases.cmd`
