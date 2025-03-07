@@ -3,7 +3,7 @@
 Compiler Versions:
 - Clang 16.0.5 (better available 17.0.6)
 - GCC 12.3.0 (better available 13.2.0), std=c++2b [GodBolt](https://godbolt.org/z/Txs8jx638)
-- fmt 8.1.1 (https://godbolt.org/z/9qr8Pf8EP)
+- fmt 8.1.1 [GoldBolt](https://godbolt.org/z/9qr8Pf8EP)
 - boost 1.81.0 [GodBolt](https://godbolt.org/z/5znMaoYWz)
 
 [what is new in C++20](https://en.cppreference.com/w/cpp/20) [working examples](https://github.com/makelinux/examples/blob/HEAD/cpp/20.cpp)
@@ -2976,6 +2976,10 @@ unique_ptr<T, void(*)(void*)> raii_ptr( static_cast<T*>(::malloc(size)), ::free 
 ```
 
 ## Scoped Exit
+
+### C++ Lambdas
+
+see: https://www.boost.org/doc/libs/1_87_0/libs/scope_exit/doc/html/scope_exit/alternatives.html
 ```cpp
 template<typename F>
 class OnScopeExit
@@ -3014,6 +3018,26 @@ void example()
   std::cout << "Entering example()\n";
   ON_SCOPE_EXIT(std::cout << "Leaving example()\n");
   ....
+}
+```
+
+### Boost Scope Exit
+
+[Boost ScopeExit](https://www.boost.org/doc/libs/1_87_0/libs/scope_exit/doc/html/index.html)
+
+```cpp
+#include <boost/scope_exit.hpp>
+
+void foo()
+{
+    bool commit {false};
+    persons_.push_back(a_person);
+
+    BOOST_SCOPE_EXIT(&commit, &persons_) {
+        if (!commit) { persons_.pop_back();
+    } BOOST_SCOPE_EXIT_END
+    ... // may throw
+    commit = true;
 }
 ```
 
