@@ -28,3 +28,4 @@
 - [Num 10 isl](cheat-islp.md)
 - [Num 11 vim](cheat-vim.md)
 - [Num 12 cmake](cheat-cmake.md)
+- [Num 13 git](cheat-git.md)
